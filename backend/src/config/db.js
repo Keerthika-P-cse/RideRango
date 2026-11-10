@@ -1,11 +1,41 @@
+import fs from 'fs'
 import mysql from 'mysql2/promise'
 import { env } from './env.js'
 
 let pool = null
 
+const getSslConfig = () => {
+  if (!env.DB.SSL) {
+    return undefined
+  }
+
+  const sslConfig = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  }
+
+  // Support Render Secret Files or filesystem paths for TiDB Cloud CA certificate
+  if (env.DB.SSL_CA) {
+    const caPath = env.DB.SSL_CA
+    if (!fs.existsSync(caPath)) {
+      throw new Error(`Database TLS configuration error: Configured CA certificate path '${caPath}' does not exist or is inaccessible.`)
+    }
+    try {
+      sslConfig.ca = fs.readFileSync(caPath, 'utf8')
+    } catch (readErr) {
+      throw new Error(`Database TLS configuration error: Unable to read CA certificate from '${caPath}': ${readErr.message}`)
+    }
+  } else if (env.DB.SSL_CA_CERT) {
+    // Direct PEM certificate string provided via environment variable
+    sslConfig.ca = env.DB.SSL_CA_CERT
+  }
+
+  return sslConfig
+}
+
 export const getPool = () => {
   if (!pool) {
-    pool = mysql.createPool({
+    const poolConfig = {
       host: env.DB.HOST,
       port: env.DB.PORT,
       user: env.DB.USER,
@@ -16,7 +46,14 @@ export const getPool = () => {
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0
-    })
+    }
+
+    const ssl = getSslConfig()
+    if (ssl) {
+      poolConfig.ssl = ssl
+    }
+
+    pool = mysql.createPool(poolConfig)
   }
   return pool
 }

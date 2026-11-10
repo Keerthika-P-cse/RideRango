@@ -24,6 +24,9 @@ export const env = {
     USER: process.env.DB_USER || 'root',
     PASSWORD: process.env.DB_PASSWORD || '',
     NAME: process.env.DB_NAME || 'riderango_db',
-    CONNECTION_LIMIT: parseInt(process.env.DB_CONNECTION_LIMIT, 10) || 10
+    CONNECTION_LIMIT: parseInt(process.env.DB_CONNECTION_LIMIT, 10) || 10,
+    SSL: process.env.DB_SSL ? process.env.DB_SSL === 'true' : (Boolean(process.env.DB_SSL_CA) || Boolean(process.env.DB_SSL_CA_CERT)),
+    SSL_CA: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.trim() : null,
+    SSL_CA_CERT: process.env.DB_SSL_CA_CERT ? process.env.DB_SSL_CA_CERT.trim() : null
   }
 }
