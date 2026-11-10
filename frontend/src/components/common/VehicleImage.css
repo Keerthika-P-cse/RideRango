@@ -1,0 +1,8 @@
+/* Stable Vehicle Image to eliminate image flashing and layout shift */
+.vehicle-stable-img {
+  display: block;
+  background-color: #10151e;
+  object-fit: cover;
+  image-rendering: auto;
+  transition: opacity 0.15s ease-in-out;
+}

@@ -1,0 +1,85 @@
+/* Admin Manage Payments Page Styles */
+.admin-payments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.payments-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.captured-metric-pill {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  padding: 10px 20px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.pill-sub {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.captured-metric-pill strong {
+  font-size: 1.35rem;
+  color: #4ade80;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.payments-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  background: #131824;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mono-txn {
+  font-family: monospace;
+  font-size: 0.84rem;
+  color: #60a5fa;
+  font-weight: 700;
+  background: #0d121c;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: inline-block;
+}
+
+.method-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #161d2b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.refund-none {
+  font-size: 0.76rem;
+  color: #64748b;
+}

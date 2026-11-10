@@ -1,0 +1,228 @@
+/* Velocity X Navigation Bar Styling */
+.navbar-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(13, 14, 18, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: var(--border-subtle);
+  width: 100%;
+}
+
+.navbar-container {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 var(--space-xl);
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Brand Logo */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  text-decoration: none;
+}
+
+.logo-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar-logo:hover .logo-icon-box {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.logo-text {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+  color: var(--color-white);
+}
+
+.logo-accent {
+  color: var(--color-primary);
+}
+
+/* Desktop Links */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.nav-item {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  padding: var(--space-xs) 0;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.nav-item:hover {
+  color: var(--color-white);
+}
+
+.nav-item-active {
+  color: var(--color-white);
+}
+
+.nav-item-active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+
+/* Actions */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.nav-auth-btn {
+  display: inline-flex;
+  font-size: var(--font-size-xs);
+  height: 38px;
+  padding: 0 var(--space-md);
+}
+
+.mobile-toggle-btn {
+  display: none;
+  color: var(--color-white);
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+/* Mobile Drawer */
+.mobile-menu-drawer {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .navbar-container {
+    padding: 0 var(--space-md);
+    height: 68px;
+  }
+
+  .navbar-links,
+  .nav-auth-btn {
+    display: none;
+  }
+
+  .mobile-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-menu-drawer {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-md) var(--space-md) var(--space-lg);
+    background-color: var(--color-surface);
+    border-bottom: var(--border-subtle);
+    gap: var(--space-xs);
+  }
+
+  .mobile-nav-item {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .mobile-nav-item:hover,
+  .mobile-nav-active {
+    background-color: var(--color-surface-light);
+    color: var(--color-white);
+  }
+
+  .mobile-nav-active {
+    border-left: 3px solid var(--color-primary);
+  }
+
+  .mobile-auth-wrapper {
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: var(--border-subtle);
+  }
+
+  .mobile-auth-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Logged-in customer badge & action */
+.navbar-user-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-user-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f3f4f6;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #141a24;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+}
+
+.nav-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  height: 36px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.mobile-user-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-user-greeting {
+  font-size: 0.88rem;
+  color: #9ca3af;
+}
+
+.mobile-user-greeting strong {
+  color: #ffffff;
+}
+
+.mobile-logout-btn {
+  width: 100%;
+  justify-content: center;
+}

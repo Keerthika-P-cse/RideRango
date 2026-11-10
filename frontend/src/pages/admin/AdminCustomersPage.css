@@ -1,0 +1,197 @@
+/* Admin Manage Customers Page Styles */
+.admin-customers-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.customers-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.customers-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #131824;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.cust-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cust-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(229, 9, 20, 0.14);
+  color: #ef4444;
+  border: 1px solid rgba(229, 9, 20, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.booking-count-badge {
+  background: #161d2b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* CUSTOMER HISTORY MODAL */
+.history-modal-card {
+  background: #131824;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.85);
+}
+
+.history-profile-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  background: #0d121c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin: 18px 0;
+}
+
+.profile-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.profile-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.history-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 14px;
+}
+
+.history-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px;
+  gap: 14px;
+  color: #94a3b8;
+}
+
+.history-bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-booking-item {
+  display: flex;
+  gap: 14px;
+  background: #0d121c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  align-items: center;
+  transition: border-color 0.15s;
+}
+
+.history-booking-item:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.hist-veh-img {
+  width: 90px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #161d2b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.hist-meta-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hist-top-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hist-ref {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.hist-veh-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hist-dates {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.hist-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hist-price-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.no-history-text {
+  text-align: center;
+  color: #64748b;
+  padding: 32px 16px;
+  font-size: 0.9rem;
+}

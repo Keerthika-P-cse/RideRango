@@ -1,0 +1,224 @@
+/* Velocity X Filter Panel Styling */
+.filter-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.filter-panel-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  position: sticky;
+  top: 90px;
+}
+
+/* Header */
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.filter-icon {
+  color: var(--color-primary);
+}
+
+.filter-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-black);
+  color: var(--color-white);
+  letter-spacing: var(--letter-spacing-tight);
+  margin: 0;
+}
+
+.filter-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.btn-reset-filters {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-reset-filters:hover {
+  color: var(--color-primary);
+  background-color: rgba(229, 35, 46, 0.1);
+}
+
+.btn-close-mobile {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Form Groups */
+.filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filter-select {
+  width: 100%;
+  height: 40px;
+  background-color: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  padding: 0 10px;
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.filter-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+.filter-select option {
+  background-color: var(--color-surface);
+  color: var(--color-white);
+}
+
+/* Price Range Inputs */
+.price-inputs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-input-box {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.price-currency-tag {
+  position: absolute;
+  left: 10px;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.filter-price-input {
+  width: 100%;
+  height: 40px;
+  background-color: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  padding: 0 8px 0 24px;
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.filter-price-input:focus {
+  border-color: var(--color-primary);
+}
+
+.price-separator {
+  color: var(--color-text-muted);
+  font-weight: bold;
+}
+
+/* Actions */
+.filter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-xs);
+}
+
+.filter-apply-btn {
+  width: 100%;
+  height: 42px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  justify-content: center;
+}
+
+.filter-clear-btn {
+  width: 100%;
+  height: 38px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  justify-content: center;
+}
+
+/* Responsive / Mobile Drawer */
+@media (max-width: 900px) {
+  .filter-sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: var(--space-md);
+  }
+
+  .filter-sidebar.mobile-open {
+    display: block;
+  }
+
+  .filter-panel-card {
+    max-width: 420px;
+    margin: var(--space-md) auto;
+    position: static;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  }
+
+  .btn-close-mobile {
+    display: flex;
+  }
+}
