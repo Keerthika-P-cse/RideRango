@@ -181,11 +181,9 @@ export const getAdminVehicles = async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT v.*, vc.name as category_name, vc.slug as category_slug,
-             COUNT(b.id) as total_bookings_count
+             (SELECT COUNT(*) FROM bookings b WHERE b.vehicle_id = v.id) as total_bookings_count
       FROM vehicles v
       LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
-      LEFT JOIN bookings b ON v.id = b.vehicle_id
-      GROUP BY v.id
       ORDER BY v.id ASC
     `)
 
@@ -193,7 +191,7 @@ export const getAdminVehicles = async (req, res) => {
     return sendSuccess(res, 'Vehicles retrieved.', enriched)
   } catch (err) {
     console.error('getAdminVehicles error:', err)
-    return sendError(res, 'Failed to retrieve vehicles.', 500)
+    return sendError(res, err.message || 'Failed to retrieve vehicles.', 500)
   }
 }
 
