@@ -250,7 +250,7 @@ export const bookingService = {
               v.seating_capacity, v.features_json,
               vc.name as category_name, vc.slug as category_slug,
               c.first_name, c.last_name, c.email, c.phone, c.driving_license_number,
-              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.gateway_transaction_id, p.gateway_order_id
+              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.gateway_transaction_id
        FROM bookings b
        JOIN vehicles v ON b.vehicle_id = v.id
        JOIN vehicle_categories vc ON v.category_id = vc.id

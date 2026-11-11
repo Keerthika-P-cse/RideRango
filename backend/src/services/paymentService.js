@@ -78,7 +78,7 @@ export const paymentService = {
     // Record initiated payment in MySQL
     await pool.query(
       `INSERT INTO payments 
-       (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_order_id, payment_notes)
+       (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, payment_notes)
        VALUES (?, ?, ?, ?, 'rental_fee', 'upi', 'initiated', ?, ?)`,
       [txnRef, booking.id, customerId, booking.total_amount, orderId, `Razorpay order ${orderId} initiated`]
     )
@@ -138,7 +138,7 @@ export const paymentService = {
 
       // Fetch booking
       const [bookings] = await connection.query(
-        `SELECT id, booking_reference, total_amount, booking_status 
+        `SELECT id, vehicle_id, booking_reference, total_amount, booking_status 
          FROM bookings 
          WHERE id = ? AND customer_id = ? 
          FOR UPDATE`,
@@ -170,7 +170,8 @@ export const paymentService = {
       // Update or create success payment record
       const [existingPayments] = await connection.query(
         `SELECT id FROM payments 
-         WHERE booking_id = ? AND gateway_order_id = ? 
+         WHERE booking_id = ? AND (gateway_transaction_id = ? OR payment_status = 'initiated')
+         ORDER BY id DESC
          LIMIT 1`,
         [booking_id, razorpay_order_id]
       )
@@ -192,9 +193,9 @@ export const paymentService = {
         const txnRef = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
         const [insertRes] = await connection.query(
           `INSERT INTO payments 
-           (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_order_id, gateway_transaction_id, paid_at, payment_notes)
-           VALUES (?, ?, ?, ?, 'rental_fee', ?, 'success', ?, ?, NOW(), 'Verified via Razorpay')`,
-          [txnRef, booking_id, customerId, booking.total_amount, sanitizedMethod, razorpay_order_id, razorpay_payment_id]
+           (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, paid_at, payment_notes)
+           VALUES (?, ?, ?, ?, 'rental_fee', ?, 'success', ?, NOW(), 'Verified via Razorpay')`,
+          [txnRef, booking_id, customerId, booking.total_amount, sanitizedMethod, razorpay_payment_id]
         )
         paymentId = insertRes.insertId
       }
@@ -244,7 +245,7 @@ export const paymentService = {
 
     await pool.query(
       `INSERT INTO payments 
-       (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_order_id, payment_notes)
+       (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, payment_notes)
        SELECT ?, b.id, ?, b.total_amount, 'rental_fee', 'upi', 'failed', ?, ?
        FROM bookings b 
        WHERE b.id = ? AND b.customer_id = ?`,

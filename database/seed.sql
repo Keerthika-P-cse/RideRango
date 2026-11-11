@@ -17,12 +17,12 @@ ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), base
 
 -- -----------------------------------------------------------------------------
 -- 2. INITIAL STAFF ROLES (Admin & Fleet Staff)
--- Note: Passwords represent pre-hashed demonstration credentials (e.g. 'Admin@123')
+-- Note: Passwords represent pre-hashed demonstration credentials ('Admin@123')
 -- -----------------------------------------------------------------------------
 INSERT INTO staff (id, first_name, last_name, email, phone, password_hash, role, approval_status, is_active) VALUES
-(1, 'System', 'Admin', 'admin@riderango.com', '+919876543210', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQmG6W6dpE.vX9LqH5jC.', 'admin', 'approved', TRUE),
-(2, 'Rajesh', 'Kumar', 'rajesh.fleet@riderango.com', '+919876543211', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQmG6W6dpE.vX9LqH5jC.', 'fleet_staff', 'approved', TRUE)
-ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), role=VALUES(role), approval_status=VALUES(approval_status);
+(1, 'System', 'Admin', 'admin@riderango.com', '+919876543210', '$2b$10$69wfXHMx2BlwawYvoxmFnuiPJm1L2R1jvhJwvoYhHtKqWMnzYZdY2', 'admin', 'approved', TRUE),
+(2, 'Rajesh', 'Kumar', 'rajesh.fleet@riderango.com', '+919876543211', '$2b$10$69wfXHMx2BlwawYvoxmFnuiPJm1L2R1jvhJwvoYhHtKqWMnzYZdY2', 'fleet_staff', 'approved', TRUE)
+ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), role=VALUES(role), approval_status=VALUES(approval_status), password_hash=VALUES(password_hash);
 
 -- -----------------------------------------------------------------------------
 -- 3. INITIAL VEHICLES (Cars, Bikes, Scooters, Commercial)
@@ -47,7 +47,8 @@ ON DUPLICATE KEY UPDATE make=VALUES(make), model=VALUES(model), daily_rate=VALUE
 
 -- -----------------------------------------------------------------------------
 -- 4. SAMPLE CUSTOMER (Demonstration baseline)
+-- Note: Password represents pre-hashed demonstration credentials ('Password@123')
 -- -----------------------------------------------------------------------------
 INSERT INTO customers (id, first_name, last_name, email, phone, password_hash, address_line1, city, state, pincode, driving_license_number, verification_status, is_active) VALUES
-(1, 'Arjun', 'Sharma', 'arjun.sharma@example.com', '+919988776655', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQmG6W6dpE.vX9LqH5jC.', '42, 4th Cross, 100ft Road', 'Bengaluru', 'Karnataka', '560038', 'KA0120220014589', 'verified', TRUE)
-ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), verification_status=VALUES(verification_status);
+(1, 'Arjun', 'Sharma', 'arjun.sharma@example.com', '+919988776655', '$2b$10$KoMMiZUQGsCgKjBWbhFV4Ojb6wmSLOwyTBhXHaiQKfttyisV1XLGi', '42, 4th Cross, 100ft Road', 'Bengaluru', 'Karnataka', '560038', 'KA0120220014589', 'verified', TRUE)
+ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), verification_status=VALUES(verification_status), password_hash=VALUES(password_hash);
