@@ -228,6 +228,24 @@
   box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
 }
 
+/* Hide browser default password reveal and clear icons (Edge/IE/Chromium) to avoid duplicate eye icons */
+.input-box input::-ms-reveal,
+.input-box input::-ms-clear,
+.auth-form input::-ms-reveal,
+.auth-form input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.input-box input::-webkit-credentials-auto-fill-button,
+.auth-form input::-webkit-credentials-auto-fill-button {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  right: 0 !important;
+}
+
 .btn-toggle-password {
   position: absolute;
   right: 12px;
@@ -242,11 +260,13 @@
   align-items: center;
   justify-content: center;
   transition: color 0.15s;
-  z-index: 2;
+  z-index: 3;
 }
 
-.btn-toggle-password:hover {
+.btn-toggle-password:hover,
+.btn-toggle-password:focus {
   color: #ffffff;
+  outline: none;
 }
 
 /* DEMO ACCOUNT BANNERS */
