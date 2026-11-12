@@ -22,9 +22,56 @@ const getStoredToken = () => {
   }
 }
 
+// In-memory cache & in-flight deduplication for frequently read GET requests
+const apiCache = new Map()
+const inFlightGets = new Map()
+const CACHE_TTL_MS = 20000 // 20 seconds TTL
+
+export function clearApiCache(endpointPrefix) {
+  if (!endpointPrefix) {
+    apiCache.clear()
+    return
+  }
+  for (const key of apiCache.keys()) {
+    if (key.includes(endpointPrefix)) {
+      apiCache.delete(key)
+    }
+  }
+}
+
 async function request(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
   const primaryUrl = `${API_BASE_URL}${cleanEndpoint}`
+  const method = (options.method || 'GET').toUpperCase()
+
+  // Invalidate cache on mutations
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    if (cleanEndpoint.includes('/vehicles') || cleanEndpoint.includes('/admin/vehicles') || cleanEndpoint.includes('/payments')) {
+      clearApiCache('/vehicles')
+    }
+    if (cleanEndpoint.includes('/bookings') || cleanEndpoint.includes('/payments')) {
+      clearApiCache('/booked-dates')
+    }
+  }
+
+  // Deduplicate and cache GET requests for cache-eligible endpoints
+  const isCacheableGet = method === 'GET' && (
+    cleanEndpoint === '/vehicles' ||
+    cleanEndpoint.startsWith('/vehicles?') ||
+    cleanEndpoint === '/categories' ||
+    cleanEndpoint === '/brands' ||
+    cleanEndpoint.includes('/booked-dates')
+  )
+
+  if (isCacheableGet) {
+    const cached = apiCache.get(cleanEndpoint)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data
+    }
+    if (inFlightGets.has(cleanEndpoint)) {
+      return inFlightGets.get(cleanEndpoint)
+    }
+  }
 
   const token = getStoredToken()
   const headers = {
@@ -42,36 +89,55 @@ async function request(endpoint, options = {}) {
     config.body = JSON.stringify(config.body)
   }
 
-  let response
-  try {
-    response = await fetch(primaryUrl, config)
-  } catch (networkErr) {
-    // Graceful network fallback: try 127.0.0.1 and local proxy
+  const executeRequest = async () => {
+    let response
     try {
-      if (primaryUrl.includes('localhost:5000')) {
-        const fallback127 = primaryUrl.replace('localhost:5000', '127.0.0.1:5000')
-        response = await fetch(fallback127, config)
-      } else {
-        const proxyUrl = `/api/v1${cleanEndpoint}`
-        response = await fetch(proxyUrl, config)
+      response = await fetch(primaryUrl, config)
+    } catch (networkErr) {
+      // Graceful network fallback: try 127.0.0.1 and local proxy
+      try {
+        if (primaryUrl.includes('localhost:5000')) {
+          const fallback127 = primaryUrl.replace('localhost:5000', '127.0.0.1:5000')
+          response = await fetch(fallback127, config)
+        } else {
+          const proxyUrl = `/api/v1${cleanEndpoint}`
+          response = await fetch(proxyUrl, config)
+        }
+      } catch {
+        throw new ApiError(
+          'Unable to connect to the RideRango server. Please check your internet connection or try again shortly.',
+          0,
+          networkErr
+        )
       }
-    } catch {
-      throw new ApiError(
-        'Unable to connect to the RideRango server. Please check your internet connection or try again shortly.',
-        0,
-        networkErr
-      )
     }
+
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const errorMessage = data?.message || `HTTP error ${response.status}: ${response.statusText}`
+      throw new ApiError(errorMessage, response.status, data?.errors || null)
+    }
+
+    if (isCacheableGet && data) {
+      apiCache.set(cleanEndpoint, {
+        timestamp: Date.now(),
+        data
+      })
+    }
+
+    return data
   }
 
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const errorMessage = data?.message || `HTTP error ${response.status}: ${response.statusText}`
-    throw new ApiError(errorMessage, response.status, data?.errors || null)
+  if (isCacheableGet) {
+    const promise = executeRequest().finally(() => {
+      inFlightGets.delete(cleanEndpoint)
+    })
+    inFlightGets.set(cleanEndpoint, promise)
+    return promise
   }
 
-  return data
+  return executeRequest()
 }
 
 export const api = {
@@ -130,6 +196,10 @@ export const api = {
   checkAvailability: async (vehicleId, startDate, endDate) => {
     const query = new URLSearchParams({ startDate, endDate }).toString()
     return request(`/vehicles/${vehicleId}/availability?${query}`)
+  },
+
+  getBookedDates: async (vehicleId) => {
+    return request(`/vehicles/${vehicleId}/booked-dates`)
   },
 
   createBooking: async (bookingData) => {

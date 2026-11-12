@@ -120,6 +120,46 @@ export const bookingService = {
   },
 
   /**
+   * Get upcoming/active booked date ranges for a vehicle without exposing customer PII
+   */
+  async getBookedDates(vehicleId, dbPool = pool) {
+    if (!vehicleId) {
+      throw new Error('Vehicle ID is required.')
+    }
+
+    const [vehicles] = await dbPool.query(
+      `SELECT id, availability_status, is_active
+       FROM vehicles
+       WHERE id = ?`,
+      [vehicleId]
+    )
+
+    if (vehicles.length === 0 || !vehicles[0].is_active) {
+      throw new Error('Vehicle not found or inactive.')
+    }
+
+    const [bookedRanges] = await dbPool.query(
+      `SELECT start_date, end_date, booking_status
+       FROM bookings
+       WHERE vehicle_id = ?
+         AND booking_status IN ('pending', 'confirmed', 'active')
+         AND end_date >= NOW()
+       ORDER BY start_date ASC`,
+      [vehicleId]
+    )
+
+    return {
+      vehicleId: vehicles[0].id,
+      availability_status: vehicles[0].availability_status,
+      bookedRanges: bookedRanges.map((r) => ({
+        start_date: r.start_date,
+        end_date: r.end_date,
+        booking_status: r.booking_status
+      }))
+    }
+  },
+
+  /**
    * Create a new genuine booking record in MySQL with safe transaction
    */
   async createBooking(customerId, bookingData) {

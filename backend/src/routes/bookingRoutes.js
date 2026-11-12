@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   checkAvailability,
+  getBookedDates,
   createBooking,
   getMyBookings,
   getBookingById,
@@ -10,8 +11,9 @@ import { requireCustomerAuth } from '../middleware/authMiddleware.js'
 
 const router = Router()
 
-// Public availability check
+// Public availability check & booked date ranges
 router.get('/vehicles/:vehicleId/availability', checkAvailability)
+router.get('/vehicles/:vehicleId/booked-dates', getBookedDates)
 
 // Protected customer booking endpoints
 router.post('/bookings', requireCustomerAuth, createBooking)

@@ -47,6 +47,7 @@ export default function VehicleDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState(null)
   const [activePhoto, setActivePhoto] = useState('')
+  const [bookedDates, setBookedDates] = useState([])
 
   // Search parameters from trip
   const pickupDate = searchParams.get('pickupDate') || ''
@@ -80,6 +81,11 @@ export default function VehicleDetailPage() {
             setVehicle(res.data)
             setActivePhoto(res.data.image)
             setIsLoading(false)
+            api.getBookedDates(res.data.id).then((bd) => {
+              if (isMounted && bd?.success && Array.isArray(bd.data?.bookedRanges)) {
+                setBookedDates(bd.data.bookedRanges)
+              }
+            }).catch(() => {})
             return
           }
         } catch (err) {
@@ -105,6 +111,11 @@ export default function VehicleDetailPage() {
                 enriched.daily_rate = matchedDb.daily_rate
                 enriched.security_deposit = matchedDb.security_deposit
                 enriched.image = matchedDb.image || enriched.image
+                api.getBookedDates(matchedDb.id).then((bd) => {
+                  if (isMounted && bd?.success && Array.isArray(bd.data?.bookedRanges)) {
+                    setBookedDates(bd.data.bookedRanges)
+                  }
+                }).catch(() => {})
               } else {
                 enriched.availability_status = 'demo'
               }
@@ -406,6 +417,31 @@ export default function VehicleDetailPage() {
                   * Security deposit of ₹{securityDeposit.toLocaleString('en-IN')} is refunded upon safe return of the vehicle.
                 </p>
               </div>
+
+              {/* Booked & Available Dates */}
+              {(vehicle.isLiveFleet || /^\d+$/.test(String(vehicle.id))) && (
+                <div className="booked-dates-box" style={{ marginBottom: '14px', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.88rem', marginBottom: '6px' }}>
+                    <Calendar size={15} />
+                    <span>Booked &amp; Available Dates</span>
+                  </div>
+                  {bookedDates.length > 0 ? (
+                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.82rem', color: '#f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {bookedDates.map((range, idx) => (
+                        <li key={idx}>
+                          Booked: {new Date(range.start_date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} &ndash; {new Date(range.end_date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ({range.booking_status})
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: bookingBlocked ? '#9ca3af' : '#10b981' }}>
+                      {bookingBlocked
+                        ? 'No upcoming date ranges available while vehicle is unavailable.'
+                        : 'No upcoming booked dates — all future dates are open for booking.'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Booking Actions */}
               {apiError && (

@@ -514,3 +514,212 @@ test('7. Customer and admin UI pages clearly label DEMO PAYMENT (Simulated) sepa
     assert.match(content, /DEMO Refund/i, `${relPath} should keep demo refund labelling`)
   }
 })
+
+test('8. getBookedDates returns upcoming active booking ranges without exposing customer PII', async () => {
+  const fakePool = {
+    async query(sql, params) {
+      const normalized = sql.replace(/\s+/g, ' ').trim()
+      if (normalized.startsWith('SELECT id, availability_status, is_active FROM vehicles WHERE id = ?')) {
+        const [vehicleId] = params
+        if (vehicleId === 999) return [[]]
+        return [[{ id: vehicleId, availability_status: 'available', is_active: 1 }]]
+      }
+      if (normalized.startsWith('SELECT start_date, end_date, booking_status FROM bookings WHERE vehicle_id = ?')) {
+        return [[
+          {
+            start_date: '2026-11-20T10:00:00.000Z',
+            end_date: '2026-11-22T10:00:00.000Z',
+            booking_status: 'confirmed',
+            // Even if query returned internal or secret customer columns, getBookedDates must not leak them
+            customer_id: 123,
+            customer_name: 'John Doe',
+            customer_phone: '9999999999'
+          }
+        ]]
+      }
+      return [[]]
+    }
+  }
+
+  const result = await bookingService.getBookedDates(1, fakePool)
+  assert.equal(result.vehicleId, 1)
+  assert.equal(result.availability_status, 'available')
+  assert.equal(result.bookedRanges.length, 1)
+
+  const range = result.bookedRanges[0]
+  assert.equal(range.start_date, '2026-11-20T10:00:00.000Z')
+  assert.equal(range.end_date, '2026-11-22T10:00:00.000Z')
+  assert.equal(range.booking_status, 'confirmed')
+
+  // Verify privacy: no PII keys present
+  assert.equal('customer_id' in range, false)
+  assert.equal('customer_name' in range, false)
+  assert.equal('customer_phone' in range, false)
+
+  await assert.rejects(
+    () => bookingService.getBookedDates(999, fakePool),
+    /Vehicle not found or inactive/
+  )
+})
+
+test('9. Backend booking conflict protection: prevents overlapping bookings, allows non-overlapping, and serializes concurrent requests', async () => {
+  // Shared mock state for vehicle 10
+  const state = {
+    bookings: [
+      {
+        id: 101,
+        vehicle_id: 10,
+        customer_id: 1,
+        booking_reference: 'RR-BK-EXISTING',
+        booking_status: 'confirmed',
+        start_date: new Date('2026-12-05T10:00:00Z'),
+        end_date: new Date('2026-12-10T10:00:00Z')
+      }
+    ],
+    nextBookingId: 102,
+    lockOwner: null
+  }
+
+  const createConflictMockPool = () => ({
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async commit() {},
+        async rollback() {},
+        release() {
+          if (state.lockOwner === this) {
+            state.lockOwner = null
+          }
+        },
+        async query(sql, params) {
+          const norm = sql.replace(/\s+/g, ' ').trim()
+
+          // Vehicle lookup FOR UPDATE
+          if (norm.startsWith('SELECT id, make, model, registration_number, daily_rate, security_deposit, availability_status, location, is_active FROM vehicles WHERE id = ? FOR UPDATE')) {
+            const [vehicleId] = params
+            if (vehicleId === 10) {
+              // Simulate row-level locking
+              if (state.lockOwner && state.lockOwner !== this) {
+                // Wait briefly for lock release if concurrent
+                let count = 0
+                while (state.lockOwner && state.lockOwner !== this && count < 20) {
+                  await new Promise((r) => setTimeout(r, 10))
+                  count++
+                }
+              }
+              state.lockOwner = this
+              return [[{
+                id: 10,
+                make: 'Maruti Suzuki',
+                model: 'Baleno Alpha',
+                registration_number: 'KA-01-RR-1010',
+                daily_rate: '1799.00',
+                security_deposit: '3000.00',
+                availability_status: 'available',
+                location: 'Koramangala Hub',
+                is_active: 1
+              }]]
+            }
+            return [[]]
+          }
+
+          // Overlap check query inside createBooking
+          if (norm.startsWith('SELECT id, booking_reference FROM bookings WHERE vehicle_id = ? AND booking_status IN (\'pending\', \'confirmed\', \'active\') AND start_date < ? AND end_date > ? FOR UPDATE')) {
+            const [vehicleId, end, start] = params
+            const reqStart = new Date(start)
+            const reqEnd = new Date(end)
+            const conflicts = state.bookings.filter((b) =>
+              b.vehicle_id === vehicleId &&
+              ['pending', 'confirmed', 'active'].includes(b.booking_status) &&
+              b.start_date < reqEnd &&
+              b.end_date > reqStart
+            )
+            return [conflicts]
+          }
+
+          // Customer update
+          if (norm.startsWith('UPDATE customers')) {
+            return [{ affectedRows: 1 }]
+          }
+
+          // Insert booking
+          if (norm.startsWith('INSERT INTO bookings')) {
+            const id = state.nextBookingId++
+            const [
+              ref, custId, vehId, st, en, days, daily, rental, dep,
+              tax, total, pick, drop, notes
+            ] = params
+            state.bookings.push({
+              id,
+              booking_reference: ref,
+              customer_id: custId,
+              vehicle_id: vehId,
+              start_date: new Date(st),
+              end_date: new Date(en),
+              booking_status: 'pending'
+            })
+            return [{ insertId: id }]
+          }
+
+          return [[]]
+        }
+      }
+    }
+  })
+
+  // Test 9.1: Overlapping booking request is rejected by backend
+  // Overlaps existing 2026-12-05 to 2026-12-10 window
+  const mockConnPool = createConflictMockPool()
+  const origGetConn = (await import('../src/config/db.js')).default.getConnection
+  ;(await import('../src/config/db.js')).default.getConnection = mockConnPool.getConnection
+
+  try {
+    // Exact overlap
+    await assert.rejects(
+      () => bookingService.createBooking(5, {
+        vehicle_id: 10,
+        start_date: '2026-12-06T10:00:00Z',
+        end_date: '2026-12-08T10:00:00Z',
+        pickup_location: 'Koramangala Hub',
+        dropoff_location: 'Koramangala Hub'
+      }),
+      /This vehicle has just been reserved by another customer for these dates/
+    )
+
+    // Test 9.2: Non-overlapping booking request succeeds
+    // Window 2026-12-12 to 2026-12-15 is after 2026-12-10
+    const nonOverlapRes = await bookingService.createBooking(5, {
+      vehicle_id: 10,
+      start_date: '2026-12-12T10:00:00Z',
+      end_date: '2026-12-15T10:00:00Z',
+      pickup_location: 'Koramangala Hub',
+      dropoff_location: 'Koramangala Hub'
+    })
+    assert.ok(nonOverlapRes.id)
+    assert.equal(nonOverlapRes.booking_status, 'pending')
+
+    // Test 9.3: Concurrent requests competing for the exact same newly available window
+    // Window: 2026-12-20 to 2026-12-22
+    const targetWindow = {
+      vehicle_id: 10,
+      start_date: '2026-12-20T10:00:00Z',
+      end_date: '2026-12-22T10:00:00Z',
+      pickup_location: 'Koramangala Hub',
+      dropoff_location: 'Koramangala Hub'
+    }
+
+    const results = await Promise.allSettled([
+      bookingService.createBooking(6, targetWindow),
+      bookingService.createBooking(7, targetWindow)
+    ])
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
+    const rejected = results.filter((r) => r.status === 'rejected')
+
+    assert.equal(fulfilled.length, 1, 'Exactly one concurrent booking request must succeed')
+    assert.equal(rejected.length, 1, 'Conflicting concurrent booking request must be rejected')
+    assert.match(rejected[0].reason.message, /reserved by another customer/)
+  } finally {
+    ;(await import('../src/config/db.js')).default.getConnection = origGetConn
+  }
+})

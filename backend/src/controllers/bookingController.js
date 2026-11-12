@@ -12,6 +12,16 @@ export const checkAvailability = async (req, res) => {
   }
 }
 
+export const getBookedDates = async (req, res) => {
+  try {
+    const { vehicleId } = req.params
+    const result = await bookingService.getBookedDates(vehicleId)
+    return sendSuccess(res, 'Booked dates retrieved', result)
+  } catch (error) {
+    return sendError(res, error.message, error.statusCode || 404)
+  }
+}
+
 export const createBooking = async (req, res) => {
   try {
     const customerId = req.customer.id

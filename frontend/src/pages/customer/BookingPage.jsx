@@ -105,6 +105,7 @@ export default function BookingPage() {
   const [loadingVehicle, setLoadingVehicle] = useState(() => !initialResolvedVehicle)
   const [liveStatusLoaded, setLiveStatusLoaded] = useState(false)
   const [availability, setAvailability] = useState({ checked: false, available: false, reason: '' })
+  const [bookedDates, setBookedDates] = useState([])
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -282,6 +283,42 @@ export default function BookingPage() {
     }
   }, [vehicle, startDateTime, endDateTime, rentalCalculation.isValidDates])
 
+  // Fetch upcoming booked date ranges for the active vehicle
+  useEffect(() => {
+    let isMounted = true
+    if (!vehicle || vehicle.isCatalogOnly || !/^\d+$/.test(String(vehicle.id))) {
+      setBookedDates([])
+      return
+    }
+
+    api.getBookedDates(vehicle.id)
+      .then((res) => {
+        if (isMounted && res?.success && Array.isArray(res.data?.bookedRanges)) {
+          setBookedDates(res.data.bookedRanges)
+        }
+      })
+      .catch(() => {
+        if (isMounted) setBookedDates([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [vehicle])
+
+  const conflictingBookedRange = useMemo(() => {
+    if (!rentalCalculation.isValidDates || bookedDates.length === 0) return null
+    const selectedStart = new Date(startDateTime).getTime()
+    const selectedEnd = new Date(endDateTime).getTime()
+    if (!Number.isFinite(selectedStart) || !Number.isFinite(selectedEnd)) return null
+
+    return bookedDates.find((r) => {
+      const rStart = new Date(r.start_date).getTime()
+      const rEnd = new Date(r.end_date).getTime()
+      return rStart < selectedEnd && rEnd > selectedStart
+    }) || null
+  }, [bookedDates, startDateTime, endDateTime, rentalCalculation.isValidDates])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setBookingForm((prev) => ({ ...prev, [name]: value }))
@@ -309,6 +346,11 @@ export default function BookingPage() {
 
     if (!vehicle || vehicle.isCatalogOnly) {
       setSubmitError('Please select a vehicle that is currently active in the database fleet.')
+      return
+    }
+
+    if (conflictingBookedRange) {
+      setSubmitError('Your selected dates overlap with an existing booking. Please choose non-conflicting dates.')
       return
     }
 
@@ -439,6 +481,26 @@ export default function BookingPage() {
               </div>
 
               <div className="card-body">
+                {bookedDates.length > 0 && (
+                  <div className="booked-dates-notice" style={{ marginBottom: '14px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', fontSize: '0.84rem' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: '#fbbf24' }}>
+                      Already Booked Dates (Unavailable):
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {bookedDates.map((range, idx) => (
+                        <li key={idx}>
+                          {new Date(range.start_date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} &ndash; {new Date(range.end_date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </li>
+                      ))}
+                    </ul>
+                    {conflictingBookedRange && (
+                      <p style={{ margin: '6px 0 0', color: '#f87171', fontWeight: 600 }}>
+                        Selected pickup/return dates conflict with an existing booking. Please pick different dates.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="form-group-grid">
                   <div className="form-field full-width">
                     <label htmlFor="pickupLocation">Pickup & Return Hub</label>
