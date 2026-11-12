@@ -1,76 +1,10 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Car, Mail, MapPin, Phone } from 'lucide-react'
-import { useAuth } from '../../context/useAuth.js'
-import { useAdminAuth } from '../../context/useAdminAuth.js'
 import './Footer.css'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-function getPortalLink({
-  pathname,
-  search,
-  isCustomerAuthenticated,
-  isStaffAuthenticated,
-  isAdmin
-}) {
-  const searchParams = new URLSearchParams(search)
-  const isStaffLoginQuery =
-    (pathname === '/login' || pathname === '/auth') &&
-    searchParams.get('portal') === 'staff'
-  const isStaffOrAdminRoute =
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/staff') ||
-    isStaffLoginQuery
-  const isCustomerPortalRoute =
-    pathname.startsWith('/my-bookings') ||
-    pathname.startsWith('/booking') ||
-    pathname.startsWith('/payment')
-
-  if (isStaffOrAdminRoute) {
-    if (isStaffAuthenticated) {
-      return {
-        label: isAdmin ? 'Admin Portal' : 'Staff Portal',
-        to: '/admin'
-      }
-    }
-    return {
-      label: 'Staff Portal',
-      to: '/login?portal=staff'
-    }
-  }
-
-  if (isCustomerPortalRoute) {
-    return isCustomerAuthenticated
-      ? { label: 'Customer Portal', to: '/my-bookings' }
-      : { label: 'Customer Login', to: '/login' }
-  }
-
-  if (isCustomerAuthenticated) {
-    return { label: 'Customer Portal', to: '/my-bookings' }
-  }
-
-  if (isStaffAuthenticated) {
-    return {
-      label: isAdmin ? 'Admin Portal' : 'Staff Portal',
-      to: '/admin'
-    }
-  }
-
-  return { label: 'Portal Login', to: '/login' }
-}
-
 export default function Footer() {
-  const location = useLocation()
-  const { isAuthenticated: isCustomerAuthenticated } = useAuth()
-  const { isAuthenticated: isStaffAuthenticated, isAdmin } = useAdminAuth()
-
-  const portalLink = getPortalLink({
-    pathname: location.pathname,
-    search: location.search,
-    isCustomerAuthenticated,
-    isStaffAuthenticated,
-    isAdmin
-  })
   return (
     <footer className="footer-wrapper">
       <div className="footer-container">
@@ -164,11 +98,6 @@ export default function Footer() {
       <div className="footer-bottom-bar">
         <div className="footer-bottom-container">
           <p>&copy; {CURRENT_YEAR} RideRango. All rights reserved.</p>
-          <div className="footer-bottom-links">
-            <Link to={portalLink.to} className="footer-portal-link">
-              {portalLink.label}
-            </Link>
-          </div>
           <p className="footer-subtext">
             Velocity X Design System &bull; Simple Vehicle Rental Management
           </p>

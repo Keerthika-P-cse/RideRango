@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Eye, Fuel, Gauge, Settings, Users } from 'lucide-react'
 import { getPopularVehicles } from '../../data/vehiclesData.js'
+import VehicleImage from '../common/VehicleImage.jsx'
 import './PopularVehicles.css'
 
 export default function PopularVehicles() {
@@ -32,7 +33,8 @@ export default function PopularVehicles() {
             <div key={vehicle.id} className="vehicle-card">
               {/* Photo Area */}
               <div className="vehicle-image-wrapper">
-                <img
+                <VehicleImage
+                  vehicle={vehicle}
                   src={vehicle.image}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="vehicle-photo"

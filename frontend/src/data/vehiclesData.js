@@ -338,7 +338,7 @@ export const vehiclesData = [
     seatingCapacity: 5,
     mileageOrRange: '15 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-harrier.jpg',
     location: 'Airport Hub (Devanahalli), Bengaluru',
     availabilityStatus: 'available',
     description: 'Bold flagship SUV built on Land Rover D8 pedigree with panoramic glass roof, JBL audio, and ADAS.'
@@ -400,7 +400,7 @@ export const vehiclesData = [
     seatingCapacity: 7,
     mileageOrRange: '14 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-scorpio-n.jpg',
     location: 'Koramangala Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Powerful 7-seater body-on-frame SUV with 4XPLOR terrain modes, Sony 3D sound, and robust durability.'
@@ -648,7 +648,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '48 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-fzx.webp',
     location: 'HSR Layout Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Retro-classic crossover motorcycle featuring bi-functional LED projector headlamp and tuck-and-roll seat.'
@@ -832,7 +832,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '47 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-pulsar-n160.webp',
     location: 'Koramangala Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Refined oil-cooled street motorcycle with bi-LED projector headlamp, gear indicator, and confidence-inspiring dual ABS.'
@@ -938,7 +938,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '52 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-activa125.png',
     location: 'Koramangala Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Premium metal-body 125cc commuter with digital-analog meter, real-time mileage display, and front disc brake.'
@@ -958,7 +958,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '48 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-grazia125.webp',
     location: 'HSR Layout Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Urban aerodynamic scooter with split LED headlamps, full digital console, and idling stop technology.'
@@ -1040,7 +1040,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '60 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-scooty-pep-plus.png',
     location: 'Electronic City Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Ultra-lightweight, easy-to-ride automatic scooty with low seat height and effortless center stand.'
@@ -1122,7 +1122,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '115 km range',
     featured: false,
-    image: '',
+    image: '/images/model-ather-450s.jpg',
     location: 'Koramangala Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Fast electric city scooter with DeepView segmented dashboard, regen braking, and fall-safe technology.'
@@ -1142,7 +1142,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '160 km range',
     featured: false,
-    image: '',
+    image: '/images/model-ather-rizta.webp',
     location: 'HSR Layout Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Spacious electric family scooter with India’s largest single seat, 34L boot, and SkidControl stability.'
@@ -1162,7 +1162,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '157 km range',
     featured: false,
-    image: '',
+    image: '/images/model-ather-450-apex.png',
     location: 'Indiranagar Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Flagship electric performance scooter with 100 km/h top speed, Warp+ acceleration, and transparent panels.'
@@ -1182,7 +1182,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '108 km range',
     featured: false,
-    image: '',
+    image: '/images/model-ather-450-plus.jpg',
     location: 'Airport Hub (Devanahalli), Bengaluru',
     availabilityStatus: 'available',
     description: 'Proven electric commuter with responsive belt drive, mono-shock rear suspension, and fast charging.'
@@ -1208,7 +1208,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '154 km range',
     featured: false,
-    image: '',
+    image: '/images/model-ace-ev.jpg',
     location: 'Peenya Industrial Hub',
     availabilityStatus: 'available',
     description: 'Quiet, zero-emission mini-truck with 600 kg cargo payload capacity for business and house shifting.'
@@ -1248,7 +1248,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '17 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-intra-v30.jpg',
     location: 'Indiranagar Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Heavy payload pickup truck with 1,300 kg capacity, 8.8 ft loading deck, and electric power steering.'
@@ -1268,7 +1268,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '16 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-intra-v50.jpg',
     location: 'Whitefield Tech Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Rugged commercial cargo truck with 1,500 kg payload capacity and oversized 9.8 ft long flat cargo deck.'
@@ -1330,7 +1330,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '15 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-bolero-extralong.jpg',
     location: 'Peenya Industrial Hub',
     availabilityStatus: 'available',
     description: 'Heavy commercial transport pickup with massive 1,700 kg payload capacity and 9-foot cargo platform.'
@@ -1390,7 +1390,7 @@ export const vehiclesData = [
     seatingCapacity: 1,
     mileageOrRange: '125 km range',
     featured: false,
-    image: '',
+    image: '/images/model-treo-zor.jpg',
     location: 'Koramangala Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Zero-emission electric 3-wheeler cargo van tailored for fast local courier parcel drops and inner-city delivery.'
@@ -1432,7 +1432,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '14 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-trax-delivery-van.jpg',
     location: 'Peenya Industrial Hub',
     availabilityStatus: 'available',
     description: 'All-steel enclosed body delivery van with massive internal volume for commercial transport and cargo boxes.'
@@ -1452,7 +1452,7 @@ export const vehiclesData = [
     seatingCapacity: 3,
     mileageOrRange: '13 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-urbania.png',
     location: 'Indiranagar Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Next-generation luxury cargo transport with Mercedes-derived FM 2.6 CR ED engine, ESP, and ABS.'
@@ -1492,7 +1492,7 @@ export const vehiclesData = [
     seatingCapacity: 2,
     mileageOrRange: '11 km/l',
     featured: false,
-    image: '',
+    image: '/images/model-shaktiman-400.jpg',
     location: 'Electronic City Hub, Bengaluru',
     availabilityStatus: 'available',
     description: 'Heavy construction and shifting tipper truck with high-strength chassis frame and hydraulic tipping bed.'

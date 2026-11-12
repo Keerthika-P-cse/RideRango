@@ -20,6 +20,8 @@ export const ALL_STATUS_LABELS = {
 }
 
 export const BOOKING_BLOCKED_STATUSES = new Set([
+  'booked',
+  'rented',
   'maintenance',
   'unavailable',
   'out_of_stock',
@@ -27,7 +29,7 @@ export const BOOKING_BLOCKED_STATUSES = new Set([
 ])
 
 export const normaliseAvailabilityStatus = (status) => {
-  const s = String(status || 'available').trim().toLowerCase()
+  const s = String(status || '').trim().toLowerCase()
   if (s === 'catalog' || s === 'catalogue' || s === '') return 'available'
   return s
 }
@@ -42,11 +44,18 @@ export const getAvailabilityClass = (status) => {
 }
 
 export const isStatusBookingBlocked = (status) => {
-  return BOOKING_BLOCKED_STATUSES.has(normaliseAvailabilityStatus(status))
+  const norm = normaliseAvailabilityStatus(status)
+  return BOOKING_BLOCKED_STATUSES.has(norm) || norm !== 'available'
 }
 
 export const getBookingUnavailableReason = (status) => {
   const norm = normaliseAvailabilityStatus(status)
+  if (norm === 'booked') {
+    return 'This vehicle is currently booked and cannot be booked at this time.'
+  }
+  if (norm === 'rented') {
+    return 'This vehicle is currently rented out and cannot be booked at this time.'
+  }
   if (norm === 'maintenance') {
     return 'This vehicle is currently under maintenance and cannot be booked.'
   }
@@ -58,6 +67,9 @@ export const getBookingUnavailableReason = (status) => {
   }
   if (norm === 'decommissioned') {
     return 'This vehicle has been decommissioned and is no longer available for rent.'
+  }
+  if (norm !== 'available') {
+    return 'This vehicle is currently not available for booking.'
   }
   return ''
 }

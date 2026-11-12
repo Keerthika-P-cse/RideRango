@@ -11,6 +11,8 @@ const generateBookingReference = () => {
 }
 
 const BLOCKED_AVAILABILITY_LABELS = {
+  booked: 'Already Booked',
+  rented: 'Currently Rented',
   maintenance: 'Under Maintenance',
   unavailable: 'Unavailable',
   out_of_stock: 'Out of Stock',
@@ -18,10 +20,10 @@ const BLOCKED_AVAILABILITY_LABELS = {
 }
 
 const getUnavailableReason = (status) => {
-  const normalized = String(status || '').toLowerCase()
-  const label = BLOCKED_AVAILABILITY_LABELS[normalized]
-  if (!label) return null
-  return `This vehicle is currently ${label} (${normalized}) and cannot be booked at this time.`
+  const normalized = String(status || '').trim().toLowerCase()
+  if (normalized === 'available') return null
+  const label = BLOCKED_AVAILABILITY_LABELS[normalized] || normalized || 'Unavailable'
+  return `This vehicle is currently ${label} (${normalized || 'unavailable'}) and cannot be booked at this time.`
 }
 
 export const bookingService = {

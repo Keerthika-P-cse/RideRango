@@ -18,7 +18,11 @@ export const createBooking = async (req, res) => {
     const booking = await bookingService.createBooking(customerId, req.body)
     return sendSuccess(res, 'Booking created successfully', booking, 201)
   } catch (error) {
-    const status = error.message.includes('reserved by another customer') ? 409 : 400
+    const isConflict =
+      error.message.includes('reserved by another customer') ||
+      error.message.includes('Already Booked') ||
+      error.message.includes('Currently Rented')
+    const status = isConflict ? 409 : 400
     return sendError(res, error.message, status)
   }
 }

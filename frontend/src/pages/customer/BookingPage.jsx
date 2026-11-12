@@ -103,6 +103,7 @@ export default function BookingPage() {
   const [vehicle, setVehicle] = useState(() => initialResolvedVehicle)
   const [dbVehicles, setDbVehicles] = useState([])
   const [loadingVehicle, setLoadingVehicle] = useState(() => !initialResolvedVehicle)
+  const [liveStatusLoaded, setLiveStatusLoaded] = useState(false)
   const [availability, setAvailability] = useState({ checked: false, available: false, reason: '' })
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -181,7 +182,10 @@ export default function BookingPage() {
       } catch (err) {
         console.error('Failed to load vehicle for booking:', err)
       } finally {
-        if (isMounted) setLoadingVehicle(false)
+        if (isMounted) {
+          setLoadingVehicle(false)
+          setLiveStatusLoaded(true)
+        }
       }
     }
 
@@ -308,8 +312,8 @@ export default function BookingPage() {
       return
     }
 
-    if (isStatusBlocked) {
-      setSubmitError(statusBlockedReason || 'This vehicle is currently unavailable for booking.')
+    if (isStatusBlocked || (availability.checked && !availability.available)) {
+      setSubmitError(statusBlockedReason || availability.reason || 'This vehicle is currently unavailable for booking.')
       return
     }
 
@@ -681,7 +685,7 @@ export default function BookingPage() {
               {/* Submit / Proceed to Payment Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || checkingAvailability || isStatusBlocked || (vehicle && vehicle.isCatalogOnly) || (!availability.available && availability.checked)}
+                disabled={isSubmitting || loadingVehicle || !liveStatusLoaded || checkingAvailability || isStatusBlocked || (vehicle && vehicle.isCatalogOnly) || !availability.available}
                 className="btn btn-primary btn-proceed-payment"
               >
                 {isSubmitting ? (

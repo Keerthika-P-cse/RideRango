@@ -127,24 +127,6 @@
   letter-spacing: 0.02em;
 }
 
-.footer-portal-link {
-  display: inline-block;
-  white-space: nowrap;
-  color: #9ca3af;
-  text-decoration: none;
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.15s;
-}
-
-.footer-portal-link:hover {
-  color: #e50914;
-  border-color: #e50914;
-}
-
 @media (max-width: 1024px) {
   .footer-container {
     grid-template-columns: 1fr 1fr;
