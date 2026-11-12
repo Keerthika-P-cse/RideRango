@@ -20,6 +20,7 @@ import {
 } from '../../data/vehiclesData.js'
 import VehicleCard from '../../components/customer/VehicleCard.jsx'
 import FilterPanel from '../../components/customer/FilterPanel.jsx'
+import { matchDbVehicleToCatalog } from '../../utils/vehicleStatusHelper.js'
 import './VehiclesPage.css'
 
 // Helper to format ISO date to DD-MM-YYYY
@@ -30,38 +31,6 @@ const formatIndianDate = (isoStr) => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`
   }
   return isoStr
-}
-
-// Helper to reliably map database vehicles to unique catalogue models
-const matchDbVehicleToModel = (dbVehicle, catalogList) => {
-  if (!dbVehicle) return null
-  const modelLower = (dbVehicle.model || '').toLowerCase()
-  const makeLower = (dbVehicle.make || '').toLowerCase()
-
-  if (modelLower.includes('nexon')) return catalogList.find((c) => c.id === 'car-tata-nexon-ev')
-  if (modelLower.includes('creta')) return catalogList.find((c) => c.id === 'car-hyundai-creta')
-  if (modelLower.includes('r15')) return catalogList.find((c) => c.id === 'bike-yamaha-r15')
-  if (modelLower.includes('hunter')) return catalogList.find((c) => c.id === 'bike-royal-enfield-hunter-350')
-  if (modelLower.includes('450x')) return catalogList.find((c) => c.id === 'scooty-ather-450x')
-  if (modelLower.includes('activa 6g') || (modelLower.includes('activa') && !modelLower.includes('125'))) {
-    return catalogList.find((c) => c.id === 'scooty-honda-activa-6g')
-  }
-  if (modelLower.includes('ace ev') || (makeLower.includes('tata') && modelLower.includes('ace'))) {
-    return catalogList.find((c) => c.id === 'utility-tata-ace-ev')
-  }
-  if (modelLower.includes('bolero maxi') || modelLower.includes('bolero pik-up')) {
-    return catalogList.find((c) => c.id === 'utility-mahindra-bolero-pikup')
-  }
-
-  return catalogList.find((c) => {
-    const cBrand = c.brand.toLowerCase()
-    const cModel = c.model.toLowerCase()
-    const cName = c.name.toLowerCase()
-    return (
-      (cBrand.includes(makeLower) || makeLower.includes(cBrand)) &&
-      (cModel.includes(modelLower) || modelLower.includes(cModel) || cName.includes(modelLower))
-    )
-  })
 }
 
 export default function VehiclesPage() {
@@ -232,8 +201,8 @@ export default function VehiclesPage() {
   const dbUnitsByModel = useMemo(() => {
     const map = {}
     backendVehicles.forEach((v) => {
-      const matched = matchDbVehicleToModel(v, fallbackCatalog)
-      const key = matched ? matched.id : `db-${v.make}-${v.model}`.toLowerCase().replace(/\s+/g, '-')
+      const matched = matchDbVehicleToCatalog(v, fallbackCatalog)
+      const key = matched ? matched.id : `db-${v.id}`
       if (!map[key]) {
         map[key] = []
       }
@@ -242,28 +211,63 @@ export default function VehiclesPage() {
     return map
   }, [backendVehicles])
 
-  // 2. Build unified unique catalogue models with live fleet status attached
+  // 2. Build unified unique vehicle models with live fleet status attached
   const uniqueCatalogModels = useMemo(() => {
-    return fallbackCatalog.map((model) => {
+    const catalogIds = new Set(fallbackCatalog.map((m) => m.id))
+    const mappedCatalog = fallbackCatalog.map((model) => {
       const liveUnits = dbUnitsByModel[model.id] || []
       const hasLiveUnits = liveUnits.length > 0
       const primaryUnit = hasLiveUnits ? liveUnits[0] : null
+      const liveStatus = hasLiveUnits
+        ? (liveUnits.some((u) => u.availability_status === 'available') ? 'available' : primaryUnit.availability_status)
+        : (model.availabilityStatus || 'available')
 
       return {
         ...model,
         hasLiveUnits,
         unitsCount: liveUnits.length,
         dbUnits: liveUnits,
-        // Status: 'available' if live fleet units are active, else 'catalog'
-        availabilityStatus: hasLiveUnits
-          ? (liveUnits.some((u) => u.availability_status === 'available') ? 'available' : primaryUnit.availability_status)
-          : 'catalog',
+        availabilityStatus: liveStatus,
         liveLocation: primaryUnit ? primaryUnit.location : null,
         liveDeposit: primaryUnit ? primaryUnit.security_deposit : model.securityDeposit,
         primaryDbId: primaryUnit ? primaryUnit.id : null,
         pricePerDay: primaryUnit ? primaryUnit.daily_rate : model.pricePerDay
       }
     })
+
+    const extraDbModels = Object.entries(dbUnitsByModel)
+      .filter(([key]) => !catalogIds.has(key))
+      .map(([, units]) => {
+        const primary = units[0]
+        const slug = String(primary.category_slug || '').toLowerCase()
+        const normCategory = slug === 'scooters' ? 'scooties' : (slug === 'commercial' ? 'utility' : slug || 'cars')
+        return {
+          id: String(primary.id),
+          name: `${primary.make} ${primary.model}`,
+          brand: primary.make,
+          model: primary.model,
+          category: normCategory,
+          categoryName: primary.category_name || 'Vehicle',
+          tier: primary.priceCategory || 'Medium-priced',
+          pricePerDay: primary.daily_rate,
+          securityDeposit: primary.security_deposit,
+          fuelType: primary.fuel_type,
+          transmission: primary.transmission,
+          seatingCapacity: primary.seating_capacity,
+          mileageOrRange: primary.features?.mileage_or_range || '',
+          image: primary.image || '',
+          location: primary.location,
+          hasLiveUnits: true,
+          unitsCount: units.length,
+          dbUnits: units,
+          availabilityStatus: primary.availability_status || 'available',
+          liveLocation: primary.location,
+          liveDeposit: primary.security_deposit,
+          primaryDbId: primary.id
+        }
+      })
+
+    return [...mappedCatalog, ...extraDbModels]
   }, [dbUnitsByModel])
 
   // Count of unique models currently available in the database fleet

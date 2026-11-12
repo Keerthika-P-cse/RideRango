@@ -10,6 +10,20 @@ const generateBookingReference = () => {
   return `RR-BK-${timestamp}-${random}`
 }
 
+const BLOCKED_AVAILABILITY_LABELS = {
+  maintenance: 'Under Maintenance',
+  unavailable: 'Unavailable',
+  out_of_stock: 'Out of Stock',
+  decommissioned: 'Decommissioned'
+}
+
+const getUnavailableReason = (status) => {
+  const normalized = String(status || '').toLowerCase()
+  const label = BLOCKED_AVAILABILITY_LABELS[normalized]
+  if (!label) return null
+  return `This vehicle is currently ${label} (${normalized}) and cannot be booked at this time.`
+}
+
 export const bookingService = {
   /**
    * Check if a specific vehicle is available for requested datetime range
@@ -47,10 +61,11 @@ export const bookingService = {
     }
 
     const vehicle = vehicles[0]
-    if (vehicle.availability_status === 'decommissioned' || vehicle.availability_status === 'maintenance') {
+    const blockedReason = getUnavailableReason(vehicle.availability_status)
+    if (blockedReason) {
       return {
         available: false,
-        reason: `Vehicle is currently in ${vehicle.availability_status} status.`,
+        reason: blockedReason,
         vehicle
       }
     }
@@ -147,8 +162,9 @@ export const bookingService = {
 
       const vehicle = vehicles[0]
 
-      if (vehicle.availability_status === 'decommissioned' || vehicle.availability_status === 'maintenance') {
-        throw new Error(`This vehicle is currently unavailable (${vehicle.availability_status}).`)
+      const blockedReason = getUnavailableReason(vehicle.availability_status)
+      if (blockedReason) {
+        throw new Error(blockedReason)
       }
 
       // 2. Strict overlap check inside transaction

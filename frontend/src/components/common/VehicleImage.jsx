@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { getCategoryFallbackImage, resolveVehicleImage } from '../../utils/vehicleImageHelper.js'
+import { resolveVehicleImage } from '../../utils/vehicleImageHelper.js'
 import './VehicleImage.css'
 
 /**
  * Common VehicleImage component
  * Features:
- * 1. Synchronous single-pass image resolution so images don't switch or flash.
- * 2. Strict category-accurate fallbacks (utility -> utility, bike -> bike, scooter -> scooter, car -> car).
- * 3. Prevents infinite onError loops and flicker by switching to fallback once.
- * 4. Zero layout shifts via CSS aspect-ratio.
+ * 1. Synchronous model-exact image resolution so images never flash or swap across models.
+ * 2. Renders a clean non-misleading UI placeholder when no verified model image is available.
+ * 3. Zero layout shifts via consistent container sizing.
  */
 export default function VehicleImage({
   vehicle,
@@ -19,22 +18,36 @@ export default function VehicleImage({
   ...rest
 }) {
   const initialResolved = resolveVehicleImage(vehicle, src)
-  const [currentSrc, setCurrentSrc] = useState(initialResolved)
-  const [hasErrored, setHasErrored] = useState(false)
+  const [erroredSrc, setErroredSrc] = useState('')
 
   const handleError = () => {
-    if (!hasErrored) {
-      setHasErrored(true)
-      const fallback = getCategoryFallbackImage(vehicle)
-      if (fallback !== currentSrc) {
-        setCurrentSrc(fallback)
-      }
-    }
+    setErroredSrc(initialResolved)
+  }
+
+  if (!initialResolved || erroredSrc === initialResolved) {
+    const label = vehicle
+      ? `${vehicle.make || vehicle.brand || ''} ${vehicle.model || vehicle.name || ''}`.trim()
+      : alt
+    return (
+      <div
+        className={`vehicle-image-fallback ${className}`}
+        role="img"
+        aria-label={label || 'Vehicle photo unavailable'}
+      >
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2.5" />
+          <circle cx="8.5" cy="9.5" r="1.5" />
+          <path d="M21 15l-5-5L5 20" />
+        </svg>
+        <span className="vehicle-image-fallback-title">{label || 'Model Photo Pending'}</span>
+        <span className="vehicle-image-fallback-sub">Verified model photo unavailable</span>
+      </div>
+    )
   }
 
   return (
     <img
-      src={currentSrc}
+      src={initialResolved}
       alt={alt}
       className={`vehicle-image-stable ${className}`}
       loading={loading}

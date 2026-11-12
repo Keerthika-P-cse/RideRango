@@ -18,6 +18,11 @@ import api from '../../services/api.js'
 import { useAuth } from '../../context/useAuth.js'
 import { getVehicleById as getCatalogVehicle, vehiclesData } from '../../data/vehiclesData.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
+import {
+  findMatchingDbUnit,
+  getBookingUnavailableReason,
+  isStatusBookingBlocked
+} from '../../utils/vehicleStatusHelper.js'
 import './BookingPage.css'
 
 const dbToCatalogMap = {
@@ -147,17 +152,8 @@ export default function BookingPage() {
         if (!selected && vehicleParam) {
           const catalogModel = getCatalogVehicle(vehicleParam)
           if (catalogModel) {
-            // Find live unit in database fleet matching this model
-            const matchedDb = liveList.find((dbV) => {
-              const modelL = (dbV.model || '').toLowerCase()
-              const makeL = (dbV.make || '').toLowerCase()
-              return (
-                (catalogModel.brand.toLowerCase().includes(makeL) || makeL.includes(catalogModel.brand.toLowerCase())) &&
-                (catalogModel.name.toLowerCase().includes(modelL) ||
-                  modelL.includes(catalogModel.model.toLowerCase()) ||
-                  catalogModel.model.toLowerCase().includes(modelL))
-              )
-            })
+            // Find live unit in database fleet matching this model strictly
+            const matchedDb = findMatchingDbUnit(catalogModel, liveList)
 
             if (matchedDb) {
               selected = {
@@ -295,6 +291,13 @@ export default function BookingPage() {
     navigate(`/booking?${nextParams.toString()}`)
   }
 
+  const isStatusBlocked = Boolean(
+    vehicle && isStatusBookingBlocked(vehicle.availability_status || vehicle.availabilityStatus)
+  )
+  const statusBlockedReason = getBookingUnavailableReason(
+    vehicle?.availability_status || vehicle?.availabilityStatus
+  )
+
   // 6. Handle Booking Submission
   const handleSubmitBooking = async (e) => {
     e.preventDefault()
@@ -302,6 +305,11 @@ export default function BookingPage() {
 
     if (!vehicle || vehicle.isCatalogOnly) {
       setSubmitError('Please select a vehicle that is currently active in the database fleet.')
+      return
+    }
+
+    if (isStatusBlocked) {
+      setSubmitError(statusBlockedReason || 'This vehicle is currently unavailable for booking.')
       return
     }
 
@@ -509,10 +517,12 @@ export default function BookingPage() {
 
                 {/* Availability Status Badge */}
                 {vehicle && !vehicle.isCatalogOnly && (
-                  <div className={`availability-banner ${checkingAvailability ? 'loading' : availability.available ? 'available' : 'unavailable'}`}>
+                  <div className={`availability-banner ${checkingAvailability ? 'loading' : (!isStatusBlocked && availability.available) ? 'available' : 'unavailable'}`}>
                     <div className="avail-status-dot"></div>
                     <span className="avail-status-text">
-                      {checkingAvailability
+                      {isStatusBlocked
+                        ? statusBlockedReason
+                        : checkingAvailability
                         ? 'Verifying fleet availability with database...'
                         : availability.available
                         ? `Available for requested dates (${vehicle.registration_number || 'Live Unit'})`
@@ -671,7 +681,7 @@ export default function BookingPage() {
               {/* Submit / Proceed to Payment Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || checkingAvailability || (vehicle && vehicle.isCatalogOnly) || (!availability.available && availability.checked)}
+                disabled={isSubmitting || checkingAvailability || isStatusBlocked || (vehicle && vehicle.isCatalogOnly) || (!availability.available && availability.checked)}
                 className="btn btn-primary btn-proceed-payment"
               >
                 {isSubmitting ? (

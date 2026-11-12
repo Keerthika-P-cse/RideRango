@@ -4,6 +4,11 @@ import adminApi from '../../services/adminApi.js'
 import { useAdminAuth } from '../../context/useAdminAuth.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import { vehiclesData } from '../../data/vehiclesData.js'
+import {
+  AVAILABILITY_OPTIONS,
+  getAvailabilityClass,
+  getAvailabilityLabel
+} from '../../utils/vehicleStatusHelper.js'
 import './AdminVehiclesPage.css'
 
 export default function AdminVehiclesPage() {
@@ -13,6 +18,7 @@ export default function AdminVehiclesPage() {
   const [categories, setCategories] = useState([])
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [updatingStatusId, setUpdatingStatusId] = useState(null)
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -171,6 +177,28 @@ export default function AdminVehiclesPage() {
   }
 
   // Filter vehicles
+  const handleStatusChange = async (vehicle, nextStatus) => {
+    if (!nextStatus || nextStatus === vehicle.availability_status) return
+    setError('')
+    setSuccessMsg('')
+    setUpdatingStatusId(vehicle.id)
+    try {
+      const res = await adminApi.updateVehicleAvailability(vehicle.id, nextStatus)
+      if (res?.success && res.data) {
+        setVehicles((prev) =>
+          prev.map((item) => (item.id === vehicle.id ? { ...item, ...res.data } : item))
+        )
+        setSuccessMsg(
+          `${vehicle.make} ${vehicle.model} (${vehicle.registration_number}) marked as ${getAvailabilityLabel(nextStatus)}.`
+        )
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update vehicle availability.')
+    } finally {
+      setUpdatingStatusId(null)
+    }
+  }
+
   const filteredVehicles = vehicles.filter((v) => {
     if (categoryFilter !== 'all' && String(v.category_id) !== String(categoryFilter)) {
       return false
@@ -230,9 +258,11 @@ export default function AdminVehiclesPage() {
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">All Statuses</option>
             <option value="available">Available</option>
+            <option value="maintenance">Under Maintenance</option>
+            <option value="unavailable">Unavailable</option>
+            <option value="out_of_stock">Out of Stock</option>
             <option value="booked">Booked</option>
             <option value="rented">Rented</option>
-            <option value="maintenance">Maintenance</option>
           </select>
         </div>
 
@@ -287,8 +317,8 @@ export default function AdminVehiclesPage() {
                       ₹{parseFloat(v.security_deposit).toLocaleString('en-IN')}
                     </td>
                     <td>
-                      <span className={`status-pill pill-${v.availability_status === 'available' ? 'confirmed' : 'pending'}`}>
-                        {v.availability_status}
+                      <span className={`status-pill status-pill-${getAvailabilityClass(v.availability_status)}`}>
+                        {getAvailabilityLabel(v.availability_status)}
                       </span>
                     </td>
                     <td>
@@ -297,19 +327,37 @@ export default function AdminVehiclesPage() {
                       </span>
                     </td>
                     <td>
-                      {isAdmin ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(v)}
-                          className="btn-tbl-action"
-                          title="Edit Vehicle Details"
+                      <div className="veh-actions-cell">
+                        <select
+                          aria-label={`Change availability for ${v.make} ${v.model}`}
+                          className="status-inline-select"
+                          value={v.availability_status}
+                          disabled={updatingStatusId === v.id}
+                          onChange={(e) => handleStatusChange(v, e.target.value)}
                         >
-                          <Edit2 size={14} />
-                          <span>Edit</span>
-                        </button>
-                      ) : (
-                        <span className="text-muted">Staff (View Only)</span>
-                      )}
+                          {!AVAILABILITY_OPTIONS.some((o) => o.value === v.availability_status) && (
+                            <option value={v.availability_status}>
+                              {getAvailabilityLabel(v.availability_status)}
+                            </option>
+                          )}
+                          {AVAILABILITY_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(v)}
+                            className="btn-tbl-action"
+                            title="Edit Vehicle Details"
+                          >
+                            <Edit2 size={14} />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -504,9 +552,11 @@ export default function AdminVehiclesPage() {
                   <label>Availability Status *</label>
                   <select name="availability_status" value={formData.availability_status} onChange={handleFormChange}>
                     <option value="available">Available</option>
+                    <option value="maintenance">Under Maintenance</option>
+                    <option value="unavailable">Unavailable</option>
+                    <option value="out_of_stock">Out of Stock</option>
                     <option value="booked">Booked</option>
                     <option value="rented">Rented</option>
-                    <option value="maintenance">Maintenance</option>
                   </select>
                 </div>
 

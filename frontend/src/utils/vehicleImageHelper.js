@@ -1,25 +1,76 @@
 import { vehiclesData as catalogVehicles } from '../data/vehiclesData.js'
 
-// Helper to get fallback category image based on vehicle category
-export const getCategoryFallbackImage = (vehicle) => {
-  if (!vehicle) return '/images/category-cars.jpg'
-  const cat = (vehicle.category_slug || vehicle.category || vehicle.categoryName || vehicle.category_name || '').toLowerCase()
-  const catId = Number(vehicle.category_id)
-  const model = (vehicle.model || vehicle.name || '').toLowerCase()
+/**
+ * Strictly resolve a verified local image matching the exact vehicle model.
+ * Returns '' when no verified image exists so components can render a clean
+ * non-misleading fallback instead of showing another vehicle model.
+ */
+export const resolveExactModelImagePath = (make = '', model = '') => {
+  const m = `${make} ${model}`.toLowerCase().replace(/\s+/g, ' ').trim()
+  if (!m) return ''
 
-  if (catId === 4 || cat.includes('utility') || cat.includes('commercial') || model.includes('ace') || model.includes('truck') || model.includes('bolero') || model.includes('winger')) {
-    return '/images/category-utility.jpg'
-  }
-  if (catId === 2 || cat.includes('bike') || model.includes('r15') || model.includes('pulsar') || model.includes('hunter') || model.includes('classic') || model.includes('bullet') || model.includes('enfield') || model.includes('apache')) {
-    return '/images/category-bikes.jpg'
-  }
-  if (catId === 3 || cat.includes('scoot') || model.includes('activa') || model.includes('ather') || model.includes('ntorq') || model.includes('jupiter') || model.includes('dio') || model.includes('ola')) {
-    return '/images/category-scooties.jpg'
-  }
-  return '/images/category-cars.jpg'
+  if (m.includes('nexon') && m.includes('ev')) return '/images/vehicle-nexon-ev.png'
+  if (m.includes('creta')) return '/images/vehicle-creta.jpg'
+  if (m.includes('swift')) return '/images/vehicle-swift.jpg'
+  if (m.includes('baleno')) return '/images/model-baleno.jpg'
+  if (m.includes('brezza')) return '/images/model-brezza.png'
+  if (m.includes('dzire')) return '/images/model-dzire.jpg'
+  if (m.includes('ertiga')) return '/images/model-ertiga.jpg'
+  if (m.includes('i20')) return '/images/model-i20.png'
+  if (m.includes('venue')) return '/images/model-venue.jpg'
+  if (m.includes('verna')) return '/images/model-verna.png'
+  if (m.includes('exter')) return '/images/model-exter.png'
+  if (m.includes('tiago')) return '/images/model-tiago.jpg'
+  if (m.includes('punch')) return '/images/model-punch.png'
+  if (m.includes('tigor')) return '/images/model-tigor.jpg'
+  if (m.includes('thar')) return '/images/vehicle-thar.jpg'
+  if (m.includes('xuv700')) return '/images/model-xuv700.png'
+  if (m.includes('xuv 3xo') || m.includes('3xo')) return '/images/model-xuv3xo.jpg'
+  if (m.includes('innova') && m.includes('crysta')) return '/images/vehicle-innova.jpg'
+  if (m.includes('fortuner')) return '/images/model-fortuner.jpg'
+  if (m.includes('glanza')) return '/images/model-glanza.jpg'
+  if (m.includes('hyryder')) return '/images/model-hyryder.jpg'
+  if (m.includes('rumion')) return '/images/model-rumion.png'
+  if (m.includes('bolero') && !m.includes('camper') && !m.includes('pik') && !m.includes('maxi')) return '/images/model-bolero.jpg'
+
+  if (m.includes('r15')) return '/images/vehicle-r15.jpg'
+  if (m.includes('mt-15') || m.includes('mt15')) return '/images/model-mt15.jpg'
+  if (m.includes('fz-s') || m.includes('fzs')) return '/images/model-fzs.jpg'
+  if (m.includes('aerox')) return '/images/model-aerox155.jpg'
+  if (m.includes('classic 350')) return '/images/vehicle-classic350.jpg'
+  if (m.includes('hunter 350')) return '/images/vehicle-hunter350.png'
+  if (m.includes('bullet 350')) return '/images/model-bullet350.jpg'
+  if (m.includes('meteor 350')) return '/images/model-meteor350.jpg'
+  if (m.includes('himalayan')) return '/images/model-himalayan.jpg'
+  if (m.includes('ns200')) return '/images/model-pulsar-ns200.jpg'
+  if (m.includes('pulsar 150')) return '/images/model-pulsar-150.jpg'
+  if (m.includes('dominar')) return '/images/model-dominar400.jpg'
+  if (m.includes('avenger')) return '/images/model-avenger220.jpg'
+
+  if (m.includes('450x')) return '/images/vehicle-ather450x.jpg'
+  if (m.includes('activa 6g')) return '/images/vehicle-activa.jpg'
+  if (m.includes('dio 125')) return '/images/model-dio125.jpg'
+  if (m.includes('aviator')) return '/images/model-aviator.jpg'
+  if (m.includes('jupiter 125')) return '/images/vehicle-jupiter.jpg'
+  if (m.includes('jupiter classic')) return '/images/model-jupiter-classic.jpg'
+  if (m.includes('ntorq')) return '/images/vehicle-ntorq.jpg'
+  if (m.includes('iqube')) return '/images/model-iqube.jpg'
+
+  if (m.includes('ace gold')) return '/images/vehicle-ace-ev.jpg'
+  if (m.includes('winger')) return '/images/model-winger.png'
+  if (m.includes('supro')) return '/images/model-supro.jpg'
+  if (m.includes('camper')) return '/images/model-bolero-camper.jpg'
+  if (m.includes('trax cruiser')) return '/images/model-trax-cruiser.jpg'
+  if (m.includes('traveller')) return '/images/model-traveller.jpg'
+  if (m.includes('bolero maxi truck') || (m.includes('bolero pik-up') && !m.includes('extralong'))) return '/images/vehicle-bolero-pikup.jpg'
+
+  return ''
 }
 
-// Helper to resolve stable vehicle image
+// Helper retained for backwards compatibility — never substitutes a misleading model photo
+export const getCategoryFallbackImage = () => ''
+
+// Helper to resolve verified vehicle image
 export const resolveVehicleImage = (vehicle, explicitSrc = '') => {
   if (explicitSrc && typeof explicitSrc === 'string' && explicitSrc.trim() !== '') {
     return explicitSrc
@@ -30,39 +81,23 @@ export const resolveVehicleImage = (vehicle, explicitSrc = '') => {
   }
 
   if (vehicle) {
-    const modelLower = (vehicle.model || vehicle.name || '').toLowerCase()
-    const makeLower = (vehicle.make || vehicle.brand || '').toLowerCase()
+    const strictPath = resolveExactModelImagePath(
+      vehicle.make || vehicle.brand || '',
+      vehicle.model || vehicle.name || ''
+    )
+    if (strictPath) return strictPath
 
-    // 1. Direct model check
-    if (modelLower.includes('ace')) return '/images/vehicle-ace-ev.jpg'
-    if (modelLower.includes('creta')) return '/images/vehicle-creta.jpg'
-    if (modelLower.includes('nexon')) return '/images/vehicle-nexon-ev.jpg'
-    if (modelLower.includes('r15')) return '/images/vehicle-r15.jpg'
-    if (modelLower.includes('hunter') || modelLower.includes('classic')) return '/images/vehicle-classic350.jpg'
-    if (modelLower.includes('ather') || modelLower.includes('450x')) return '/images/vehicle-ather450x.jpg'
-    if (modelLower.includes('activa')) return '/images/vehicle-activa.jpg'
-    if (modelLower.includes('bolero')) return '/images/vehicle-bolero-pikup.jpg'
-    if (modelLower.includes('swift')) return '/images/vehicle-swift.jpg'
-    if (modelLower.includes('innova')) return '/images/vehicle-innova.jpg'
-    if (modelLower.includes('thar')) return '/images/vehicle-thar.jpg'
-    if (modelLower.includes('brezza')) return '/images/vehicle-brezza.jpg'
-    if (modelLower.includes('ntorq')) return '/images/vehicle-ntorq.jpg'
-    if (modelLower.includes('jupiter')) return '/images/vehicle-jupiter.jpg'
-    if (modelLower.includes('pulsar')) return '/images/vehicle-pulsar.jpg'
-    if (modelLower.includes('winger')) return '/images/vehicle-winger.jpg'
-    if (modelLower.includes('sedan') || modelLower.includes('verna') || modelLower.includes('city') || modelLower.includes('ciaz')) return '/images/vehicle-sedan.jpg'
-
-    // 2. Catalog lookup
-    const found = catalogVehicles.find((c) => {
-      const cBrand = c.brand.toLowerCase()
-      const cModel = c.model.toLowerCase()
-      return (
-        (cBrand.includes(makeLower) || makeLower.includes(cBrand)) &&
-        (cModel.includes(modelLower) || modelLower.includes(cModel))
-      )
-    })
-    if (found && found.image) return found.image
+    const makeLower = (vehicle.make || vehicle.brand || '').toLowerCase().trim()
+    const modelLower = (vehicle.model || vehicle.name || '').toLowerCase().trim()
+    if (makeLower && modelLower) {
+      const found = catalogVehicles.find((c) => {
+        const cBrand = c.brand.toLowerCase()
+        const cModel = c.model.toLowerCase()
+        return cBrand === makeLower && cModel === modelLower
+      })
+      if (found && found.image) return found.image
+    }
   }
 
-  return getCategoryFallbackImage(vehicle)
+  return ''
 }

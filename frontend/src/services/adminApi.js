@@ -81,6 +81,11 @@ export const adminApi = {
     adminRequest('/admin/vehicles', { method: 'POST', body: payload }),
   updateVehicle: (id, payload) =>
     adminRequest(`/admin/vehicles/${id}`, { method: 'PUT', body: payload }),
+  updateVehicleAvailability: (id, availability_status) =>
+    adminRequest(`/admin/vehicles/${id}/availability`, {
+      method: 'PATCH',
+      body: { availability_status }
+    }),
 
   // Bookings
   getBookings: (params = {}) => {

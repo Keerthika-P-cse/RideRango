@@ -12,40 +12,88 @@ const normaliseCategorySlug = (slug) => {
 }
 
 /**
+ * Strictly resolve a verified local image that matches the exact vehicle model.
+ * Never falls back to another model's photo or an unrelated generic photo.
+ */
+const resolveExactVehicleImage = (make = '', model = '') => {
+  const m = `${make} ${model}`.toLowerCase().replace(/\s+/g, ' ').trim()
+
+  if (m.includes('nexon') && m.includes('ev')) return '/images/vehicle-nexon-ev.png'
+  if (m.includes('creta')) return '/images/vehicle-creta.jpg'
+  if (m.includes('swift')) return '/images/vehicle-swift.jpg'
+  if (m.includes('baleno')) return '/images/model-baleno.jpg'
+  if (m.includes('brezza')) return '/images/model-brezza.png'
+  if (m.includes('dzire')) return '/images/model-dzire.jpg'
+  if (m.includes('ertiga')) return '/images/model-ertiga.jpg'
+  if (m.includes('i20')) return '/images/model-i20.png'
+  if (m.includes('venue')) return '/images/model-venue.jpg'
+  if (m.includes('verna')) return '/images/model-verna.png'
+  if (m.includes('exter')) return '/images/model-exter.png'
+  if (m.includes('tiago')) return '/images/model-tiago.jpg'
+  if (m.includes('punch')) return '/images/model-punch.png'
+  if (m.includes('tigor')) return '/images/model-tigor.jpg'
+  if (m.includes('thar')) return '/images/vehicle-thar.jpg'
+  if (m.includes('xuv700')) return '/images/model-xuv700.png'
+  if (m.includes('xuv 3xo') || m.includes('3xo')) return '/images/model-xuv3xo.jpg'
+  if (m.includes('innova') && m.includes('crysta')) return '/images/vehicle-innova.jpg'
+  if (m.includes('fortuner')) return '/images/model-fortuner.jpg'
+  if (m.includes('glanza')) return '/images/model-glanza.jpg'
+  if (m.includes('hyryder')) return '/images/model-hyryder.jpg'
+  if (m.includes('rumion')) return '/images/model-rumion.png'
+  if (m.includes('bolero') && !m.includes('camper') && !m.includes('pik') && !m.includes('maxi')) return '/images/model-bolero.jpg'
+
+  if (m.includes('r15')) return '/images/vehicle-r15.jpg'
+  if (m.includes('mt-15') || m.includes('mt15')) return '/images/model-mt15.jpg'
+  if (m.includes('fz-s') || m.includes('fzs')) return '/images/model-fzs.jpg'
+  if (m.includes('aerox')) return '/images/model-aerox155.jpg'
+  if (m.includes('classic 350')) return '/images/vehicle-classic350.jpg'
+  if (m.includes('hunter 350')) return '/images/vehicle-hunter350.png'
+  if (m.includes('bullet 350')) return '/images/model-bullet350.jpg'
+  if (m.includes('meteor 350')) return '/images/model-meteor350.jpg'
+  if (m.includes('himalayan')) return '/images/model-himalayan.jpg'
+  if (m.includes('ns200')) return '/images/model-pulsar-ns200.jpg'
+  if (m.includes('pulsar 150')) return '/images/model-pulsar-150.jpg'
+  if (m.includes('dominar')) return '/images/model-dominar400.jpg'
+  if (m.includes('avenger')) return '/images/model-avenger220.jpg'
+
+  if (m.includes('450x')) return '/images/vehicle-ather450x.jpg'
+  if (m.includes('activa 6g')) return '/images/vehicle-activa.jpg'
+  if (m.includes('dio 125')) return '/images/model-dio125.jpg'
+  if (m.includes('aviator')) return '/images/model-aviator.jpg'
+  if (m.includes('jupiter 125')) return '/images/vehicle-jupiter.jpg'
+  if (m.includes('jupiter classic')) return '/images/model-jupiter-classic.jpg'
+  if (m.includes('ntorq')) return '/images/vehicle-ntorq.jpg'
+  if (m.includes('iqube')) return '/images/model-iqube.jpg'
+
+  if (m.includes('ace gold')) return '/images/vehicle-ace-ev.jpg'
+  if (m.includes('winger')) return '/images/model-winger.png'
+  if (m.includes('supro')) return '/images/model-supro.jpg'
+  if (m.includes('camper')) return '/images/model-bolero-camper.jpg'
+  if (m.includes('trax cruiser')) return '/images/model-trax-cruiser.jpg'
+  if (m.includes('traveller')) return '/images/model-traveller.jpg'
+  if (m.includes('bolero maxi truck') || (m.includes('bolero pik-up') && !m.includes('extralong'))) return '/images/vehicle-bolero-pikup.jpg'
+
+  return null
+}
+
+/**
  * Map vehicle to primary display image and price tier
  */
 export const enrichVehicleData = (v) => {
-  const modelLower = (v.model || '').toLowerCase()
-  const makeLower = (v.make || '').toLowerCase()
-
-  let image = '/images/category-cars.jpg'
-  if (modelLower.includes('nexon')) image = '/images/vehicle-nexon-ev.jpg'
-  else if (modelLower.includes('creta')) image = '/images/vehicle-creta.jpg'
-  else if (modelLower.includes('thar')) image = '/images/vehicle-thar.jpg'
-  else if (modelLower.includes('innova')) image = '/images/vehicle-innova.jpg'
-  else if (modelLower.includes('swift') || modelLower.includes('baleno') || modelLower.includes('tiago')) image = '/images/vehicle-swift.jpg'
-  else if (modelLower.includes('dzire') || modelLower.includes('verna') || modelLower.includes('city') || modelLower.includes('tigor')) image = '/images/vehicle-sedan.jpg'
-  else if (modelLower.includes('brezza')) image = '/images/vehicle-brezza.jpg'
-  else if (makeLower.includes('maruti')) image = '/images/vehicle-swift.jpg'
-  else if (modelLower.includes('r15')) image = '/images/vehicle-r15.jpg'
-  else if (modelLower.includes('classic') || modelLower.includes('hunter') || makeLower.includes('royal')) image = '/images/vehicle-classic350.jpg'
-  else if (modelLower.includes('pulsar')) image = '/images/vehicle-pulsar.jpg'
-  else if (modelLower.includes('ather') || modelLower.includes('450x')) image = '/images/vehicle-ather450x.jpg'
-  else if (modelLower.includes('activa')) image = '/images/vehicle-activa.jpg'
-  else if (modelLower.includes('ntorq') || modelLower.includes('dio')) image = '/images/vehicle-ntorq.jpg'
-  else if (modelLower.includes('jupiter')) image = '/images/vehicle-jupiter.jpg'
-  else if (modelLower.includes('ace')) image = '/images/vehicle-ace-ev.jpg'
-  else if (modelLower.includes('bolero') || modelLower.includes('intra') || modelLower.includes('pikup') || modelLower.includes('pickup')) image = '/images/vehicle-bolero-pikup.jpg'
-  else if (modelLower.includes('winger') || modelLower.includes('urbania') || modelLower.includes('traveller')) image = '/images/vehicle-winger.jpg'
-  else if (v.category_slug === 'bikes') image = '/images/category-bikes.jpg'
-  else if (v.category_slug === 'scooters') image = '/images/category-scooties.jpg'
-  else if (v.category_slug === 'commercial') image = '/images/category-utility.jpg'
+  const image = resolveExactVehicleImage(v.make, v.model)
 
   // Determine price tier
   const rate = parseFloat(v.daily_rate)
   let priceCategory = 'Affordable'
   if (rate >= 3000) priceCategory = 'Premium'
   else if (rate >= 1500) priceCategory = 'Medium-priced'
+
+  let features = {}
+  try {
+    features = typeof v.features_json === 'string' ? JSON.parse(v.features_json) : v.features_json || {}
+  } catch {
+    features = {}
+  }
 
   return {
     ...v,
@@ -54,7 +102,7 @@ export const enrichVehicleData = (v) => {
     security_deposit: parseFloat(v.security_deposit || 0),
     priceCategory,
     image,
-    features: typeof v.features_json === 'string' ? JSON.parse(v.features_json) : v.features_json || {}
+    features
   }
 }
 

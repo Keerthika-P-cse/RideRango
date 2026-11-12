@@ -88,6 +88,14 @@
 
 .card-status-badge.status-booked,
 .card-status-badge.status-rented {
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #93c5fd;
+}
+
+.card-status-badge.status-unavailable,
+.card-status-badge.status-out-of-stock,
+.card-status-badge.status-decommissioned {
   background: rgba(239, 68, 68, 0.18);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #f87171;

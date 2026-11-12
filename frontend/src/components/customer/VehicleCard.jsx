@@ -1,6 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Eye, Fuel, Gauge, Settings, Users } from 'lucide-react'
 import VehicleImage from '../common/VehicleImage.jsx'
+import {
+  getAvailabilityClass,
+  getAvailabilityLabel,
+  normaliseAvailabilityStatus
+} from '../../utils/vehicleStatusHelper.js'
 import './VehicleCard.css'
 
 export default function VehicleCard({ vehicle, searchContext = '' }) {
@@ -11,20 +16,19 @@ export default function VehicleCard({ vehicle, searchContext = '' }) {
     ? vehicle.pricePerDay
     : parseFloat(vehicle.daily_rate || 0)
 
-  // Status mapping
-  const hasUnits = Boolean(vehicle.hasLiveUnits || vehicle.unitsCount > 0)
-  const status = hasUnits
-    ? 'available'
-    : (vehicle.availabilityStatus || vehicle.availability_status || 'catalog')
+  // Real DB-driven status mapping (never falls back to "Catalogue Model")
+  const rawStatus = vehicle.availabilityStatus || vehicle.availability_status || 'available'
+  const status = normaliseAvailabilityStatus(rawStatus)
   const isAvailable = status === 'available'
-  const statusLabel = hasUnits
-    ? (vehicle.unitsCount > 1 ? `Available (${vehicle.unitsCount} vehicles)` : 'Available')
-    : (status === 'catalog' ? 'Catalogue Model' : (status.charAt(0).toUpperCase() + status.slice(1)))
+  const statusClass = getAvailabilityClass(status)
+  const statusLabel = isAvailable && vehicle.unitsCount > 1
+    ? `Available (${vehicle.unitsCount} vehicles)`
+    : getAvailabilityLabel(status)
 
   const detailsUrl = `/vehicles/${vehicle.id}${searchContext ? `?${searchContext}` : ''}`
 
   return (
-    <div className={`vehicle-catalog-card ${!isAvailable && status !== 'catalog' ? 'card-unavailable' : ''}`}>
+    <div className={`vehicle-catalog-card ${!isAvailable ? 'card-unavailable' : ''}`}>
       {/* Photo Frame */}
       <div className="card-image-box">
         <VehicleImage
@@ -40,7 +44,7 @@ export default function VehicleCard({ vehicle, searchContext = '' }) {
             {vehicle.categoryName || vehicle.category_name || 'Vehicle'}
           </span>
 
-          <span className={`card-status-badge status-${status}`}>
+          <span className={`card-status-badge status-${statusClass}`}>
             {statusLabel}
           </span>
         </div>

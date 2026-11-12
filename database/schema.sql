@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   hourly_rate DECIMAL(10, 2) DEFAULT NULL,
   security_deposit DECIMAL(10, 2) NOT NULL DEFAULT 2000.00,
   current_odometer_km INT NOT NULL DEFAULT 0,
-  availability_status ENUM('available', 'booked', 'rented', 'maintenance', 'decommissioned') NOT NULL DEFAULT 'available',
+  availability_status ENUM('available', 'booked', 'rented', 'maintenance', 'unavailable', 'out_of_stock', 'decommissioned') NOT NULL DEFAULT 'available',
   location VARCHAR(100) NOT NULL DEFAULT 'Main Hub',
   features_json JSON DEFAULT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,

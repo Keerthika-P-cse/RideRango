@@ -79,6 +79,20 @@
 
 .detail-status-pill.status-booked,
 .detail-status-pill.status-rented {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+.detail-status-pill.status-maintenance {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.detail-status-pill.status-unavailable,
+.detail-status-pill.status-out-of-stock,
+.detail-status-pill.status-decommissioned {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: #f87171;
@@ -443,6 +457,36 @@
   font-weight: var(--font-weight-bold);
   justify-content: center;
   box-shadow: 0 4px 16px rgba(229, 35, 46, 0.35);
+}
+
+.booking-unavailable-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.booking-unavailable-notice .notice-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.btn-book-disabled,
+.btn-book-disabled:hover {
+  background: #2b3240;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.85;
+  transform: none;
 }
 
 .btn-return-catalog {

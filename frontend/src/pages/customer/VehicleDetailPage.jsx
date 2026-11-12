@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
@@ -16,6 +17,15 @@ import {
 } from 'lucide-react'
 import api from '../../services/api.js'
 import { getVehicleById as getFallbackVehicle } from '../../data/vehiclesData.js'
+import VehicleImage from '../../components/common/VehicleImage.jsx'
+import {
+  findMatchingDbUnit,
+  getAvailabilityClass,
+  getAvailabilityLabel,
+  getBookingUnavailableReason,
+  isStatusBookingBlocked,
+  normaliseAvailabilityStatus
+} from '../../utils/vehicleStatusHelper.js'
 import './VehicleDetailPage.css'
 
 // Helper to format ISO date to DD-MM-YYYY
@@ -73,39 +83,32 @@ export default function VehicleDetailPage() {
         }
       }
 
-      // 2. Fetch catalog model
+      // 2. Fetch catalog model & link live database unit
       const fallback = getFallbackVehicle(id)
       if (isMounted) {
         if (fallback) {
+          const enriched = { ...fallback, isLiveFleet: false }
           try {
-            // Check if this model exists in the live database fleet
             const res = await api.getVehicles()
             if (isMounted && res && res.success && res.data && res.data.vehicles) {
-              const matchedDb = res.data.vehicles.find((dbV) => {
-                const modelL = (dbV.model || '').toLowerCase()
-                const makeL = (dbV.make || '').toLowerCase()
-                return (
-                  (fallback.brand.toLowerCase().includes(makeL) || makeL.includes(fallback.brand.toLowerCase())) &&
-                  (fallback.name.toLowerCase().includes(modelL) ||
-                    modelL.includes(fallback.model.toLowerCase()) ||
-                    fallback.model.toLowerCase().includes(modelL))
-                )
-              })
+              const matchedDb = findMatchingDbUnit(enriched, res.data.vehicles)
               if (matchedDb) {
-                fallback.isLiveFleet = true
-                fallback.registration_number = matchedDb.registration_number
-                fallback.availability_status = matchedDb.availability_status
-                fallback.location = matchedDb.location || fallback.location
-                fallback.daily_rate = matchedDb.daily_rate
-                fallback.security_deposit = matchedDb.security_deposit
+                enriched.isLiveFleet = true
+                enriched.primaryDbId = matchedDb.id
+                enriched.registration_number = matchedDb.registration_number
+                enriched.availability_status = matchedDb.availability_status
+                enriched.location = matchedDb.location || enriched.location
+                enriched.daily_rate = matchedDb.daily_rate
+                enriched.security_deposit = matchedDb.security_deposit
+                enriched.image = matchedDb.image || enriched.image
               }
             }
           } catch {
-            // Keep fallback gracefully
+            // Keep catalog representation gracefully
           }
 
-          setVehicle({ ...fallback })
-          setActivePhoto(fallback.image)
+          setVehicle(enriched)
+          setActivePhoto(enriched.image || '')
         } else {
           setVehicle(null)
         }
@@ -156,20 +159,15 @@ export default function VehicleDetailPage() {
     : parseFloat(vehicle.security_deposit || 2000)
 
   const estimatedTotal = rentalDays ? rentalDays * price : null
-  const status = vehicle.availability_status || vehicle.availabilityStatus || 'available'
-  const isAvailable = status === 'available'
+  const rawStatus = vehicle.availability_status || vehicle.availabilityStatus || 'available'
+  const status = normaliseAvailabilityStatus(rawStatus)
+  const statusClass = getAvailabilityClass(status)
+  const statusLabel = status === 'available' ? 'Available' : getAvailabilityLabel(status)
+  const bookingBlocked = isStatusBookingBlocked(status)
+  const unavailableReason = getBookingUnavailableReason(status)
 
-  // Additional photographs gallery
-  const fallbackCatPhoto =
-    vehicle.category === 'bikes'
-      ? '/images/category-bikes.jpg'
-      : vehicle.category === 'scooties' || vehicle.category === 'scooters'
-      ? '/images/category-scooties.jpg'
-      : vehicle.category === 'utility' || vehicle.category === 'commercial'
-      ? '/images/category-utility.jpg'
-      : '/images/category-cars.jpg'
-
-  const photoGallery = [...new Set([vehicle.image, fallbackCatPhoto])].filter(Boolean)
+  // Strictly show verified model photographs only (never mix unrelated category images)
+  const photoGallery = [...new Set([vehicle.image])].filter(Boolean)
 
   // Preserve search parameters for back button and booking
   const searchContext = searchParams.toString()
@@ -191,10 +189,8 @@ export default function VehicleDetailPage() {
             <span className="detail-category-badge">
               {vehicle.categoryName || vehicle.category_name || 'Vehicle'}
             </span>
-            <span className={`detail-status-pill status-${vehicle.isLiveFleet ? status : 'catalog'}`}>
-              {vehicle.isLiveFleet
-                ? (isAvailable ? 'Available in Fleet' : status.toUpperCase())
-                : 'Catalogue Model'}
+            <span className={`detail-status-pill status-${statusClass}`}>
+              {statusLabel}
             </span>
           </div>
         </div>
@@ -205,31 +201,31 @@ export default function VehicleDetailPage() {
           <div className="detail-visual-column">
             {/* Main Stage Image */}
             <div className="main-image-stage">
-              <img
+              <VehicleImage
+                vehicle={vehicle}
                 src={activePhoto || vehicle.image}
                 alt={`${vehicle.brand || vehicle.make} ${vehicle.model}`}
                 className="stage-image"
-                onError={(e) => {
-                  e.target.onerror = null
-                  e.target.src = fallbackCatPhoto
-                }}
+                loading="eager"
               />
             </div>
 
-            {/* Thumbnail Gallery */}
-            <div className="thumbnail-strip">
-              {photoGallery.map((imgSrc, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`thumbnail-btn ${activePhoto === imgSrc ? 'selected' : ''}`}
-                  onClick={() => setActivePhoto(imgSrc)}
-                  aria-label={`View photograph ${idx + 1}`}
-                >
-                  <img src={imgSrc} alt={`Thumbnail ${idx + 1}`} className="thumbnail-img" />
-                </button>
-              ))}
-            </div>
+            {/* Thumbnail Gallery (only shown when multiple model-specific images exist) */}
+            {photoGallery.length > 1 && (
+              <div className="thumbnail-strip">
+                {photoGallery.map((imgSrc, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`thumbnail-btn ${activePhoto === imgSrc ? 'selected' : ''}`}
+                    onClick={() => setActivePhoto(imgSrc)}
+                    aria-label={`View photograph ${idx + 1}`}
+                  >
+                    <img src={imgSrc} alt={`Thumbnail ${idx + 1}`} className="thumbnail-img" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Description Card */}
             <div className="detail-section-card">
@@ -400,10 +396,28 @@ export default function VehicleDetailPage() {
               </div>
 
               {/* Booking Actions */}
+              {bookingBlocked && (
+                <div className="booking-unavailable-notice" role="status">
+                  <AlertTriangle size={16} className="notice-icon" />
+                  <span>{unavailableReason}</span>
+                </div>
+              )}
+
               <div className="booking-cta-group">
-                <Link to={bookNowUrl} className="btn btn-primary btn-book-vehicle">
-                  <span>Book Now</span>
-                </Link>
+                {bookingBlocked ? (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    className="btn btn-book-vehicle btn-book-disabled"
+                  >
+                    <span>{statusLabel} — Booking Unavailable</span>
+                  </button>
+                ) : (
+                  <Link to={bookNowUrl} className="btn btn-primary btn-book-vehicle">
+                    <span>Book Now</span>
+                  </Link>
+                )}
 
                 <button
                   type="button"

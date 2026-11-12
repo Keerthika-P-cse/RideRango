@@ -340,6 +340,67 @@ export const updateAdminVehicle = async (req, res) => {
   }
 }
 
+const VALID_AVAILABILITY_STATUSES = new Set([
+  'available',
+  'booked',
+  'rented',
+  'maintenance',
+  'unavailable',
+  'out_of_stock',
+  'decommissioned'
+])
+
+/**
+ * 7b. Vehicle Management: Update Availability Status (Staff & Admin)
+ */
+export const updateVehicleAvailability = async (req, res) => {
+  try {
+    const vehicleId = parseInt(req.params.id, 10)
+    const { availability_status } = req.body || {}
+
+    if (Number.isNaN(vehicleId) || vehicleId <= 0) {
+      return sendError(res, 'Invalid vehicle ID.', 400)
+    }
+
+    const nextStatus = typeof availability_status === 'string' ? availability_status.trim().toLowerCase() : ''
+    if (!VALID_AVAILABILITY_STATUSES.has(nextStatus)) {
+      return sendError(
+        res,
+        'Invalid availability status. Allowed values: available, maintenance, unavailable, out_of_stock, booked, rented, decommissioned.',
+        400
+      )
+    }
+
+    const [existing] = await pool.query('SELECT id, make, model, availability_status FROM vehicles WHERE id = ?', [vehicleId])
+    if (existing.length === 0) {
+      return sendError(res, 'Vehicle not found.', 404)
+    }
+
+    await pool.query(
+      'UPDATE vehicles SET availability_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [nextStatus, vehicleId]
+    )
+
+    const [updatedRows] = await pool.query(
+      `SELECT v.*, vc.name as category_name, vc.slug as category_slug,
+              (SELECT COUNT(*) FROM bookings b WHERE b.vehicle_id = v.id) as total_bookings_count
+       FROM vehicles v
+       LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
+       WHERE v.id = ?`,
+      [vehicleId]
+    )
+
+    return sendSuccess(
+      res,
+      'Vehicle availability status updated successfully.',
+      enrichVehicleData(updatedRows[0])
+    )
+  } catch (err) {
+    console.error('updateVehicleAvailability error:', err)
+    return sendError(res, err.message || 'Failed to update vehicle availability status.', 500)
+  }
+}
+
 /**
  * 8. Booking Management: List Bookings
  */

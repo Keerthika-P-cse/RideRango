@@ -8,6 +8,7 @@ import {
   getAdminVehicles,
   createAdminVehicle,
   updateAdminVehicle,
+  updateVehicleAvailability,
   getAdminBookings,
   updateBookingStatus,
   getAdminCustomers,
@@ -36,6 +37,7 @@ router.get('/categories', requireStaffAuth, getVehicleCategories)
 router.get('/vehicles', requireStaffAuth, getAdminVehicles)
 router.post('/vehicles', requireStaffAuth, requireAdmin, createAdminVehicle)
 router.put('/vehicles/:id', requireStaffAuth, requireAdmin, updateAdminVehicle)
+router.patch('/vehicles/:id/availability', requireStaffAuth, updateVehicleAvailability)
 
 // Booking Management
 router.get('/bookings', requireStaffAuth, getAdminBookings)
