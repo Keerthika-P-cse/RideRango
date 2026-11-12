@@ -276,8 +276,8 @@ export const bookingService = {
   /**
    * Get single booking by ID with security verification
    */
-  async getBookingById(bookingId, customerId) {
-    const [rows] = await pool.query(
+  async getBookingById(bookingId, customerId, dbPool = pool) {
+    const [rows] = await dbPool.query(
       `SELECT b.*, 
               v.make, v.model, v.registration_number, v.color, v.fuel_type, v.transmission, 
               v.seating_capacity, v.features_json,
@@ -290,16 +290,26 @@ export const bookingService = {
        JOIN vehicles v ON b.vehicle_id = v.id
        JOIN vehicle_categories vc ON v.category_id = vc.id
        JOIN customers c ON b.customer_id = c.id
-       LEFT JOIN payments p ON p.id = (
-         SELECT p2.id FROM payments p2
-         WHERE p2.booking_id = b.id AND p2.payment_status = 'success' AND p2.payment_type != 'refund'
-         ORDER BY p2.id DESC LIMIT 1
-       )
-       LEFT JOIN payments r ON r.id = (
-         SELECT r2.id FROM payments r2
-         WHERE r2.booking_id = b.id AND r2.payment_type = 'refund'
-         ORDER BY r2.id DESC LIMIT 1
-       )
+       LEFT JOIN (
+         SELECT p1.booking_id, p1.transaction_reference, p1.payment_status, p1.payment_method, p1.paid_at, p1.amount
+         FROM payments p1
+         INNER JOIN (
+           SELECT booking_id, MAX(id) as max_id
+           FROM payments
+           WHERE payment_status = 'success' AND payment_type != 'refund'
+           GROUP BY booking_id
+         ) p2 ON p1.id = p2.max_id
+       ) p ON p.booking_id = b.id
+       LEFT JOIN (
+         SELECT r1.booking_id, r1.transaction_reference, r1.payment_status, r1.amount, r1.paid_at, r1.payment_notes
+         FROM payments r1
+         INNER JOIN (
+           SELECT booking_id, MAX(id) as max_id
+           FROM payments
+           WHERE payment_type = 'refund'
+           GROUP BY booking_id
+         ) r2 ON r1.id = r2.max_id
+       ) r ON r.booking_id = b.id
        WHERE b.id = ? AND b.customer_id = ?`,
       [bookingId, customerId]
     )
@@ -314,8 +324,8 @@ export const bookingService = {
   /**
    * Get all bookings for authenticated customer
    */
-  async getCustomerBookings(customerId) {
-    const [rows] = await pool.query(
+  async getCustomerBookings(customerId, dbPool = pool) {
+    const [rows] = await dbPool.query(
       `SELECT b.*, 
               v.make, v.model, v.registration_number, v.fuel_type, v.transmission,
               vc.name as category_name, vc.slug as category_slug,
@@ -325,16 +335,26 @@ export const bookingService = {
        FROM bookings b
        JOIN vehicles v ON b.vehicle_id = v.id
        JOIN vehicle_categories vc ON v.category_id = vc.id
-       LEFT JOIN payments p ON p.id = (
-         SELECT p2.id FROM payments p2
-         WHERE p2.booking_id = b.id AND p2.payment_status = 'success' AND p2.payment_type != 'refund'
-         ORDER BY p2.id DESC LIMIT 1
-       )
-       LEFT JOIN payments r ON r.id = (
-         SELECT r2.id FROM payments r2
-         WHERE r2.booking_id = b.id AND r2.payment_type = 'refund'
-         ORDER BY r2.id DESC LIMIT 1
-       )
+       LEFT JOIN (
+         SELECT p1.booking_id, p1.transaction_reference, p1.payment_status, p1.payment_method, p1.paid_at, p1.amount
+         FROM payments p1
+         INNER JOIN (
+           SELECT booking_id, MAX(id) as max_id
+           FROM payments
+           WHERE payment_status = 'success' AND payment_type != 'refund'
+           GROUP BY booking_id
+         ) p2 ON p1.id = p2.max_id
+       ) p ON p.booking_id = b.id
+       LEFT JOIN (
+         SELECT r1.booking_id, r1.transaction_reference, r1.payment_status, r1.amount, r1.paid_at, r1.payment_notes
+         FROM payments r1
+         INNER JOIN (
+           SELECT booking_id, MAX(id) as max_id
+           FROM payments
+           WHERE payment_type = 'refund'
+           GROUP BY booking_id
+         ) r2 ON r1.id = r2.max_id
+       ) r ON r.booking_id = b.id
        WHERE b.customer_id = ?
        ORDER BY b.created_at DESC`,
       [customerId]

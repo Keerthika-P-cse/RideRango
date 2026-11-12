@@ -500,3 +500,72 @@ test('14. Persistent deadlock exhausts retries, rolls back, and returns 409 conf
   assert.equal(isDeadlockOrLockError(new Error('Normal validation error')), false)
   assert.equal(typeof withDeadlockRetry, 'function')
 })
+
+test('15. getCustomerBookings and getBookingById use TiDB-compatible derived-table JOINs without subqueries in ON conditions', async () => {
+  const capturedQueries = []
+  const sampleRow = {
+    id: 41,
+    booking_reference: 'RR-BK-TEST-41',
+    customer_id: 7,
+    vehicle_id: 1,
+    make: 'Honda',
+    model: 'Activa 6G',
+    registration_number: 'KA-01-RR-0001',
+    fuel_type: 'Petrol',
+    transmission: 'Automatic',
+    category_name: 'Scooters',
+    category_slug: 'scooters',
+    booking_status: 'cancelled',
+    total_amount: '999.00',
+    transaction_reference: 'RR-PAY-41',
+    payment_status: 'success',
+    payment_method: 'upi',
+    paid_amount: '999.00',
+    refund_reference: 'RR-REF-41',
+    refund_status: 'refunded',
+    refund_amount: '999.00'
+  }
+
+  const mockPool = {
+    async query(sql, params) {
+      capturedQueries.push({ sql, params })
+      return [[sampleRow]]
+    }
+  }
+
+  const list = await bookingService.getCustomerBookings(7, mockPool)
+  assert.equal(list.length, 1)
+  assert.equal(list[0].refund_status, 'refunded')
+  assert.equal(list[0].refund_amount, '999.00')
+  assert.equal(list[0].transaction_reference, 'RR-PAY-41')
+
+  const single = await bookingService.getBookingById(41, 7, mockPool)
+  assert.equal(single.id, 41)
+  assert.equal(single.refund_reference, 'RR-REF-41')
+
+  assert.equal(capturedQueries.length, 2)
+  assert.deepEqual(capturedQueries[0].params, [7])
+  assert.deepEqual(capturedQueries[1].params, [41, 7])
+
+  for (const { sql } of capturedQueries) {
+    assert.doesNotMatch(sql, /\bON\s+[^()\n]*\(\s*SELECT\b/i)
+    assert.match(sql, /LEFT\s+JOIN\s*\(/i)
+    assert.match(sql, /GROUP\s+BY\s+booking_id/i)
+    assert.match(sql, /b\.customer_id\s*=\s*\?/i)
+  }
+})
+
+test('16. Booking and admin SQL queries never use subqueries inside JOIN ON conditions', () => {
+  const files = [
+    'backend/src/services/bookingService.js',
+    'backend/src/controllers/adminController.js'
+  ]
+  for (const relPath of files) {
+    const content = fs.readFileSync(path.join(repoRoot, relPath), 'utf8')
+    assert.doesNotMatch(
+      content,
+      /\bJOIN\b[^\n]*\bON\b[^\n]*\(\s*[\r\n\s]*SELECT\b/i,
+      `Found unsupported subquery inside JOIN ON in ${relPath}`
+    )
+  }
+})
