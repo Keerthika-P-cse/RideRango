@@ -413,7 +413,7 @@ export const getAdminBookings = async (req, res) => {
              c.email as customer_email, c.phone as customer_phone,
              v.make, v.model, v.registration_number, v.year as vehicle_year,
              vc.name as category_name, vc.slug as category_slug,
-             p.payment_status, p.transaction_reference, p.payment_method, p.amount as paid_amount,
+             p.payment_status, p.transaction_reference, p.gateway_transaction_id, p.payment_notes, p.payment_method, p.amount as paid_amount,
              r.payment_status as refund_status, r.amount as refund_amount,
              r.transaction_reference as refund_reference, r.paid_at as refunded_at, r.payment_notes as refund_notes
       FROM bookings b
@@ -421,7 +421,7 @@ export const getAdminBookings = async (req, res) => {
       LEFT JOIN vehicles v ON b.vehicle_id = v.id
       LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
       LEFT JOIN (
-        SELECT p1.booking_id, p1.amount, p1.payment_status, p1.transaction_reference, p1.payment_method
+        SELECT p1.booking_id, p1.amount, p1.payment_status, p1.transaction_reference, p1.gateway_transaction_id, p1.payment_notes, p1.payment_method
         FROM payments p1
         INNER JOIN (
           SELECT booking_id, MAX(id) as max_id

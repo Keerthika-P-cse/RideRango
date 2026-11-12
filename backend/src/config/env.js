@@ -51,6 +51,7 @@ export const env = {
   PORT: parseInt(process.env.PORT, 10) || 5000,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   API_PREFIX: process.env.API_PREFIX || '/api/v1',
+  DEMO_PAYMENT_MODE: String(process.env.DEMO_PAYMENT_MODE || '').trim().toLowerCase() === 'true',
   JWT_SECRET: resolveJwtSecret(NODE_ENV, process.env.JWT_SECRET),
   RAZORPAY: {
     KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_RideRangoDevKey',

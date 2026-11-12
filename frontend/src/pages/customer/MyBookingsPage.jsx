@@ -351,7 +351,11 @@ export default function MyBookingsPage() {
                             DEMO Refund: ₹{parseFloat(booking.refund_amount || booking.paid_amount || booking.total_amount).toLocaleString('en-IN')} ({booking.refund_status})
                           </span>
                         ) : isConfirmed ? (
-                          <span className="paid-tag">Paid via {booking.payment_method?.toUpperCase() || 'DEMO'}</span>
+                          <span className="paid-tag">
+                            {(String(booking.gateway_transaction_id || '').startsWith('DEMO-') || String(booking.payment_notes || '').includes('DEMO PAYMENT'))
+                              ? `DEMO PAYMENT (Simulated) • ${booking.payment_method?.toUpperCase() || 'DEMO'}`
+                              : `Paid via ${booking.payment_method?.toUpperCase() || 'RAZORPAY'}`}
+                          </span>
                         ) : isPending ? (
                           <span className="unpaid-tag">Payment Pending</span>
                         ) : (
@@ -505,8 +509,17 @@ export default function MyBookingsPage() {
                     <div className="payment-verified-box">
                       <CheckCircle2 size={18} className="verified-icon" />
                       <div>
-                        <strong>Paid & Verified via {selectedBooking.payment_method?.toUpperCase() || 'DEMO'}</strong>
-                        <p>Txn Ref: {selectedBooking.transaction_reference || 'CONFIRMED'}</p>
+                        {(String(selectedBooking.gateway_transaction_id || '').startsWith('DEMO-') || String(selectedBooking.payment_notes || '').includes('DEMO PAYMENT')) ? (
+                          <>
+                            <strong>DEMO PAYMENT (Simulated) via {selectedBooking.payment_method?.toUpperCase() || 'DEMO'}</strong>
+                            <p>Txn Ref: {selectedBooking.transaction_reference || 'DEMO-CONFIRMED'} &bull; No real money transferred</p>
+                          </>
+                        ) : (
+                          <>
+                            <strong>Paid & Verified via {selectedBooking.payment_method?.toUpperCase() || 'RAZORPAY'}</strong>
+                            <p>Txn Ref: {selectedBooking.transaction_reference || 'CONFIRMED'}</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : selectedBooking.booking_status === 'cancelled' ? (

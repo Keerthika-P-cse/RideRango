@@ -142,13 +142,28 @@ export default function AdminPaymentsPage() {
                       <span className="method-tag">
                         {p.payment_type === 'refund'
                           ? 'DEMO REFUND'
-                          : (p.payment_method ? p.payment_method.toUpperCase() : 'DEMO')}
+                          : (String(p.gateway_transaction_id || '').startsWith('DEMO-') || String(p.payment_notes || '').includes('DEMO PAYMENT'))
+                            ? `DEMO PAYMENT (${p.payment_method ? p.payment_method.toUpperCase() : 'SIMULATED'})`
+                            : (p.payment_method ? p.payment_method.toUpperCase() : 'RAZORPAY')}
                       </span>
                     </td>
                     <td>
-                      <span className={`status-pill pill-${p.payment_status === 'success' ? 'confirmed' : (p.payment_status === 'initiated' ? 'pending' : (p.payment_status === 'refunded' ? 'completed' : 'cancelled'))}`}>
-                        {p.payment_status}
-                      </span>
+                      <div className="cell-col">
+                        <span className={`status-pill pill-${p.payment_status === 'success' ? 'confirmed' : (p.payment_status === 'initiated' ? 'pending' : (p.payment_status === 'refunded' ? 'completed' : 'cancelled'))}`}>
+                          {p.payment_status}
+                        </span>
+                        {p.payment_type !== 'refund' && (String(p.gateway_transaction_id || '').startsWith('DEMO-') || String(p.payment_notes || '').includes('DEMO PAYMENT')) && (
+                          <span className="cell-sub">
+                            {p.payment_status === 'success'
+                              ? 'DEMO PAYMENT (Simulated)'
+                              : p.payment_status === 'failed'
+                                ? (String(p.payment_notes || '').toLowerCase().includes('cancelled')
+                                  ? 'DEMO Cancelled (Simulated)'
+                                  : 'DEMO Failed (Simulated)')
+                                : 'DEMO Initiated (Simulated)'}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span className="cell-dates">

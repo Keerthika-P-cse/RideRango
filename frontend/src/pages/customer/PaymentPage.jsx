@@ -105,8 +105,16 @@ export default function PaymentPage() {
 
       const orderData = orderRes.data
 
-      // Check if official Razorpay checkout script loaded
-      if (typeof window.Razorpay === 'function' && !orderData.keyId.includes('DevKey')) {
+      // Explicit DEMO PAYMENT mode (when DEMO_PAYMENT_MODE=true on backend)
+      if (orderData.demoMode === true) {
+        setTestOrderData(orderData)
+        setShowTestModal(true)
+        setProcessingPayment(false)
+        return
+      }
+
+      // Official Razorpay Checkout SDK
+      if (typeof window.Razorpay === 'function' && orderData.keyId && !orderData.keyId.includes('DevKey')) {
         const options = {
           key: orderData.keyId,
           amount: orderData.amount,
@@ -158,10 +166,7 @@ export default function PaymentPage() {
 
         rzp.open()
       } else {
-        // Razorpay Test Mode Simulator (clean inline sandbox for development & testing)
-        setTestOrderData(orderData)
-        setShowTestModal(true)
-        setProcessingPayment(false)
+        throw new Error('Razorpay Checkout SDK failed to load or payment gateway is not configured.')
       }
     } catch (err) {
       setProcessingPayment(false)
@@ -193,22 +198,66 @@ export default function PaymentPage() {
     }
   }
 
-  // Simulate test failure
-  const handleSimulateFailure = async () => {
+  // Process explicit DEMO PAYMENT (simulated success or simulated failure)
+  const handleDemoPayment = async (outcome) => {
+    if (!testOrderData) return
+    setProcessingPayment(true)
+    setError('')
+
+    try {
+      const payload = {
+        booking_id: booking.id,
+        order_id: testOrderData.orderId,
+        outcome,
+        payment_method: selectedMethod
+      }
+      if (outcome === 'failed') {
+        payload.failure_reason = 'Simulated payment failure for academic demonstration'
+      }
+
+      const res = await api.processDemoPayment(payload)
+      const data = res?.data || {}
+
+      if (outcome === 'success' && data.outcome === 'success') {
+        setPaymentSuccess(true)
+        setPaymentResult({
+          bookingReference: data.bookingReference || booking.booking_reference,
+          paymentId: data.paymentId || testOrderData.orderId,
+          isDemo: true
+        })
+        setShowTestModal(false)
+      } else {
+        setShowTestModal(false)
+        setError(
+          data.message ||
+          res?.message ||
+          'DEMO PAYMENT FAILED (Simulated): Simulated payment failure for academic demonstration. Your booking remains pending so you can retry payment.'
+        )
+      }
+    } catch (err) {
+      setShowTestModal(false)
+      setError(err.message || 'Demo payment processing failed.')
+    } finally {
+      setProcessingPayment(false)
+    }
+  }
+
+  // Cancel DEMO PAYMENT using existing payment failure/cancellation API
+  const handleCancelDemoPayment = async () => {
     if (!testOrderData) return
     setProcessingPayment(true)
     try {
       await api.recordPaymentFailure({
         booking_id: booking.id,
         razorpay_order_id: testOrderData.orderId,
-        error_description: 'Test mode transaction declined by user'
+        error_description: 'Payment Cancelled by user during demo checkout'
       })
-      setShowTestModal(false)
-      setError('Test payment was cancelled or declined. The booking remains pending so you can safely retry.')
-    } catch (err) {
-      setError(err.message)
+    } catch {
+      // Even if logging the cancellation notice fails, keep booking pending and allow retry
     } finally {
+      setShowTestModal(false)
       setProcessingPayment(false)
+      setError('Payment Cancelled. Your booking remains pending so you can retry payment anytime.')
     }
   }
 
@@ -246,10 +295,18 @@ export default function PaymentPage() {
               <CheckCircle2 size={48} className="success-icon" />
             </div>
 
-            <span className="success-badge">Payment Verified & Confirmed</span>
-            <h1 className="success-title">Booking Confirmed!</h1>
+            <span className="success-badge">
+              {paymentResult?.isDemo
+                ? 'DEMO PAYMENT Verified & Confirmed (Simulated)'
+                : 'Payment Verified & Confirmed'}
+            </span>
+            <h1 className="success-title">
+              {paymentResult?.isDemo ? 'Booking Confirmed (DEMO)!' : 'Booking Confirmed!'}
+            </h1>
             <p className="success-desc">
-              Your vehicle booking has been confirmed and paid through Razorpay.
+              {paymentResult?.isDemo
+                ? 'DEMO PAYMENT (Simulated – No real money transferred). Your vehicle booking has been confirmed for demonstration.'
+                : 'Your vehicle booking has been confirmed and paid through Razorpay.'}
             </p>
 
             <div className="success-reference-box">
@@ -496,23 +553,23 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* Razorpay Test Mode Checkout Modal (Sandbox & verification) */}
+        {/* DEMO PAYMENT Modal (Available only when DEMO_PAYMENT_MODE is enabled on backend) */}
         {showTestModal && testOrderData && (
           <div className="test-payment-overlay">
             <div className="test-payment-modal">
               <div className="modal-top">
-                <span className="test-badge">Razorpay Test Gateway (Sandbox)</span>
-                <h3>Authorize Payment</h3>
-                <p>Simulating Razorpay checkout for development verification without live charges.</p>
+                <span className="test-badge">DEMO PAYMENT (Simulated – No real money transferred)</span>
+                <h3>Simulated Demo Payment</h3>
+                <p>Academic demonstration mode. Choose a simulated payment outcome below without real charges.</p>
               </div>
 
               <div className="modal-amount-box">
-                <span className="lbl">Payable Amount:</span>
+                <span className="lbl">Payable Amount (DEMO):</span>
                 <strong className="amt">₹{(testOrderData.amount / 100).toLocaleString('en-IN')}</strong>
               </div>
 
               <div className="modal-meta-box">
-                <div><span>Order ID:</span> <code>{testOrderData.orderId}</code></div>
+                <div><span>Demo Order ID:</span> <code>{testOrderData.orderId}</code></div>
                 <div><span>Booking Ref:</span> <strong>{testOrderData.bookingReference}</strong></div>
                 <div><span>Payment Method:</span> <strong className="upper">{selectedMethod}</strong></div>
               </div>
@@ -521,26 +578,29 @@ export default function PaymentPage() {
                 <button
                   type="button"
                   disabled={processingPayment}
-                  onClick={() => handleVerifyPayment({
-                    booking_id: booking.id,
-                    razorpay_order_id: testOrderData.orderId,
-                    razorpay_payment_id: `pay_test_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                    razorpay_signature: 'test_signature_verified',
-                    payment_method: selectedMethod
-                  })}
+                  onClick={() => handleDemoPayment('success')}
                   className="btn btn-primary btn-modal-success"
                 >
                   <CheckCircle2 size={18} />
-                  <span>Authorize & Verify Success</span>
+                  <span>Simulate Successful Payment</span>
                 </button>
 
                 <button
                   type="button"
                   disabled={processingPayment}
-                  onClick={handleSimulateFailure}
+                  onClick={() => handleDemoPayment('failed')}
                   className="btn btn-secondary btn-modal-fail"
                 >
-                  <span>Simulate Payment Failure / Cancel</span>
+                  <span>Simulate Failed Payment</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={processingPayment}
+                  onClick={handleCancelDemoPayment}
+                  className="btn btn-secondary"
+                >
+                  <span>Cancel Payment</span>
                 </button>
               </div>
             </div>

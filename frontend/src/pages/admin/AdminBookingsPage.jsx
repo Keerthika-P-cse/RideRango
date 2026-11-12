@@ -190,6 +190,9 @@ export default function AdminBookingsPage() {
                         <span className={`status-pill pill-${b.payment_status === 'success' ? 'confirmed' : 'pending'}`}>
                           {b.payment_status || 'unpaid'}
                         </span>
+                        {b.payment_status === 'success' && (String(b.gateway_transaction_id || '').startsWith('DEMO-') || String(b.payment_notes || '').includes('DEMO PAYMENT')) && (
+                          <span className="cell-sub">DEMO PAYMENT (Simulated)</span>
+                        )}
                         {b.refund_status && (
                           <span className="cell-sub">
                             DEMO Refund: ₹{parseFloat(b.refund_amount || 0).toLocaleString('en-IN')} ({b.refund_status})
@@ -280,8 +283,13 @@ export default function AdminBookingsPage() {
                     <span className={`status-pill pill-${selectedBooking.payment_status === 'success' ? 'confirmed' : 'pending'}`}>
                       {selectedBooking.payment_status || 'unpaid'}
                     </span>
-                    <span>Method: {selectedBooking.payment_method ? selectedBooking.payment_method.toUpperCase() : 'DEMO'}</span>
+                    <span>Method: {selectedBooking.payment_method ? selectedBooking.payment_method.toUpperCase() : 'RAZORPAY'}</span>
                   </div>
+                  {selectedBooking.payment_status === 'success' && (String(selectedBooking.gateway_transaction_id || '').startsWith('DEMO-') || String(selectedBooking.payment_notes || '').includes('DEMO PAYMENT')) && (
+                    <span className="box-val">
+                      <strong>DEMO PAYMENT (Simulated)</strong> &bull; No real money transferred
+                    </span>
+                  )}
                   <span className="box-val">Ref: {selectedBooking.transaction_reference || 'N/A'}</span>
                   <span className="box-val">Total Amount: <strong>₹{parseFloat(selectedBooking.total_amount).toLocaleString('en-IN')}</strong></span>
                   {selectedBooking.refund_status && (

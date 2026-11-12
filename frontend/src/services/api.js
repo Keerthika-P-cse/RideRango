@@ -176,6 +176,13 @@ export const api = {
     })
   },
 
+  processDemoPayment: async (demoPayload) => {
+    return request('/payments/demo', {
+      method: 'POST',
+      body: demoPayload
+    })
+  },
+
   getBaseUrl: () => API_BASE_URL
 }
 

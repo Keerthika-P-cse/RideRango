@@ -47,11 +47,14 @@ export function verifyRazorpaySignature(orderId, paymentId, signature, secret = 
 
 export const paymentService = {
   /**
-   * Create Razorpay server-side payment order
+   * Create Razorpay server-side payment order (or DEMO order when DEMO_PAYMENT_MODE is enabled)
    */
-  async createPaymentOrder(bookingId, customerId) {
+  async createPaymentOrder(bookingId, customerId, dbPool = pool, options = {}) {
+    const demoMode = options.demoMode ?? env.DEMO_PAYMENT_MODE
+    const razorpayClient = options.razorpayClient !== undefined ? options.razorpayClient : razorpayInstance
+
     // 1. Verify booking existence, ownership, and pending status
-    const [bookings] = await pool.query(
+    const [bookings] = await dbPool.query(
       `SELECT b.*, v.make, v.model, c.first_name, c.last_name, c.email, c.phone 
        FROM bookings b
        JOIN vehicles v ON b.vehicle_id = v.id
@@ -74,14 +77,19 @@ export const paymentService = {
       throw new Error('Cannot process payment for a cancelled booking.')
     }
 
-    // Amount in paise for Razorpay
+    if (booking.booking_status !== 'pending') {
+      throw new Error(`Cannot initiate payment for a booking with status: ${booking.booking_status}.`)
+    }
+
+    // Amount in paise for Razorpay / INR display
     const amountInPaise = Math.round(parseFloat(booking.total_amount) * 100)
     let orderId = ''
+    let isDemoOrder = false
 
-    // Attempt official Razorpay SDK order creation
-    if (razorpayInstance && !env.RAZORPAY.KEY_ID.includes('DevKey')) {
+    // Attempt official Razorpay SDK order creation when real keys are configured
+    if (razorpayClient && !env.RAZORPAY.KEY_ID.includes('DevKey')) {
       try {
-        const order = await razorpayInstance.orders.create({
+        const order = await razorpayClient.orders.create({
           amount: amountInPaise,
           currency: 'INR',
           receipt: booking.booking_reference,
@@ -96,28 +104,35 @@ export const paymentService = {
         console.error('Razorpay order creation failed:', err.message)
         throw new Error('Unable to create Razorpay payment order. Please try again shortly.')
       }
+    } else if (demoMode) {
+      // Explicit DEMO PAYMENT mode: never calls Razorpay APIs
+      orderId = `DEMO-ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+      isDemoOrder = true
     } else if (env.NODE_ENV === 'production') {
       throw new Error('Razorpay payment gateway is not configured in production.')
     } else {
-      // Local non-production development order ID simulation
-      orderId = `order_test_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+      throw new Error('Razorpay keys are not configured. Enable DEMO_PAYMENT_MODE=true for simulated demo payments.')
     }
 
     const txnRef = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+    const orderNotes = isDemoOrder
+      ? `DEMO PAYMENT order ${orderId} initiated (Simulated - No real money transferred)`
+      : `Razorpay order ${orderId} initiated`
 
     // Record initiated payment in MySQL
-    await pool.query(
+    await dbPool.query(
       `INSERT INTO payments 
        (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, payment_notes)
        VALUES (?, ?, ?, ?, 'rental_fee', 'upi', 'initiated', ?, ?)`,
-      [txnRef, booking.id, customerId, booking.total_amount, orderId, `Razorpay order ${orderId} initiated`]
+      [txnRef, booking.id, customerId, booking.total_amount, orderId, orderNotes]
     )
 
     return {
       orderId,
       amount: amountInPaise,
       currency: 'INR',
-      keyId: env.RAZORPAY.KEY_ID,
+      keyId: isDemoOrder ? null : env.RAZORPAY.KEY_ID,
+      demoMode: isDemoOrder,
       bookingReference: booking.booking_reference,
       booking: {
         id: booking.id,
@@ -405,6 +420,259 @@ export const paymentService = {
     )
 
     return { recorded: true }
+  },
+
+  /**
+   * Process an explicit DEMO PAYMENT (simulated success or simulated failure).
+   * Strictly gated by DEMO_PAYMENT_MODE; never calls Razorpay APIs and never weakens real Razorpay verification.
+   */
+  async processDemoPayment(customerId, payload, dbPool = pool, options = {}) {
+    const demoMode = options.demoMode ?? env.DEMO_PAYMENT_MODE
+    if (!demoMode) {
+      const err = new Error('Demo payment mode is not enabled on this server.')
+      err.statusCode = 403
+      throw err
+    }
+
+    const {
+      booking_id,
+      order_id,
+      outcome,
+      payment_method = 'upi',
+      amount,
+      currency,
+      failure_reason
+    } = payload || {}
+
+    if (!booking_id || !order_id) {
+      throw new Error('Demo payment booking_id and order_id are required.')
+    }
+
+    const normalizedOutcome = String(outcome || '').trim().toLowerCase()
+    if (normalizedOutcome !== 'success' && normalizedOutcome !== 'failed') {
+      throw new Error('Invalid demo payment outcome. Expected "success" or "failed".')
+    }
+
+    if (currency !== undefined && String(currency).toUpperCase() !== 'INR') {
+      throw new Error('Unsupported payment currency. Expected INR.')
+    }
+
+    const validMethods = ['upi', 'net_banking', 'credit_card', 'debit_card', 'cash']
+    const sanitizedMethod = typeof payment_method === 'string' && validMethods.includes(payment_method.toLowerCase())
+      ? payment_method.toLowerCase()
+      : 'upi'
+
+    return withDeadlockRetry(async () => {
+      const connection = await dbPool.getConnection()
+
+      try {
+        await connection.beginTransaction()
+
+        // Consistent lock order: Vehicle -> Booking -> Payment
+        const [bookingLookup] = await connection.query(
+          `SELECT vehicle_id 
+           FROM bookings 
+           WHERE id = ? AND customer_id = ?`,
+          [booking_id, customerId]
+        )
+
+        if (bookingLookup.length === 0) {
+          throw new Error('Booking not found or not owned by you.')
+        }
+
+        await connection.query(
+          `SELECT id, availability_status 
+           FROM vehicles 
+           WHERE id = ? 
+           FOR UPDATE`,
+          [bookingLookup[0].vehicle_id]
+        )
+
+        const [bookings] = await connection.query(
+          `SELECT id, vehicle_id, booking_reference, total_amount, booking_status 
+           FROM bookings 
+           WHERE id = ? AND customer_id = ? 
+           FOR UPDATE`,
+          [booking_id, customerId]
+        )
+
+        if (bookings.length === 0) {
+          throw new Error('Booking not found or not owned by you.')
+        }
+
+        const booking = bookings[0]
+
+        if (booking.booking_status === 'cancelled') {
+          throw new Error('Cannot process demo payment for a cancelled booking.')
+        }
+
+        if (booking.booking_status === 'confirmed') {
+          if (normalizedOutcome === 'failed') {
+            throw new Error('Cannot record a failed payment: booking is already paid and confirmed.')
+          }
+          await connection.commit()
+          return {
+            success: true,
+            alreadyConfirmed: true,
+            demoMode: true,
+            outcome: 'success',
+            bookingReference: booking.booking_reference,
+            message: 'Booking has already been confirmed.'
+          }
+        }
+
+        if (booking.booking_status !== 'pending') {
+          throw new Error(`Cannot process demo payment for a booking with status: ${booking.booking_status}.`)
+        }
+
+        // Prevent duplicate successful payments and prevent failed attempts from touching an existing success
+        const [existingSuccessPayments] = await connection.query(
+          `SELECT id FROM payments 
+           WHERE booking_id = ? AND payment_status = 'success' AND payment_type != 'refund' 
+           LIMIT 1 
+           FOR UPDATE`,
+          [booking_id]
+        )
+
+        if (existingSuccessPayments.length > 0) {
+          if (normalizedOutcome === 'failed') {
+            throw new Error('Cannot record a failed payment: booking already has a successful payment.')
+          }
+          await connection.commit()
+          return {
+            success: true,
+            alreadyConfirmed: true,
+            demoMode: true,
+            outcome: 'success',
+            bookingReference: booking.booking_reference,
+            message: 'Booking already has a verified payment.'
+          }
+        }
+
+        // Lock the initiated demo order belonging to this booking & customer
+        const [orderPayments] = await connection.query(
+          `SELECT id, amount, payment_status 
+           FROM payments 
+           WHERE booking_id = ? AND customer_id = ? AND gateway_transaction_id = ? 
+           ORDER BY id DESC 
+           LIMIT 1 
+           FOR UPDATE`,
+          [booking_id, customerId, order_id]
+        )
+
+        if (orderPayments.length === 0) {
+          throw new Error('Demo payment order not found for this booking and customer.')
+        }
+
+        const orderPayment = orderPayments[0]
+
+        if (orderPayment.payment_status === 'success') {
+          if (normalizedOutcome === 'failed') {
+            throw new Error('Cannot mark an already successful payment as failed.')
+          }
+          await connection.commit()
+          return {
+            success: true,
+            alreadyConfirmed: true,
+            demoMode: true,
+            outcome: 'success',
+            bookingReference: booking.booking_reference,
+            message: 'Payment has already been completed.'
+          }
+        }
+
+        if (orderPayment.payment_status !== 'initiated') {
+          throw new Error(`Demo payment order is in '${orderPayment.payment_status}' state and cannot be processed.`)
+        }
+
+        const expectedTotal = parseFloat(booking.total_amount)
+        const orderAmount = parseFloat(orderPayment.amount)
+        if (!Number.isFinite(expectedTotal) || !Number.isFinite(orderAmount) || Math.abs(orderAmount - expectedTotal) > 0.01) {
+          throw new Error('Payment amount mismatch with booking total.')
+        }
+
+        const expectedAmountInPaise = Math.round(expectedTotal * 100)
+        if (amount !== undefined && Number(amount) !== expectedAmountInPaise) {
+          throw new Error('Payment amount mismatch with expected order amount.')
+        }
+
+        if (normalizedOutcome === 'success') {
+          const demoPaymentId = `DEMO-PAY-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+
+          await connection.query(
+            `UPDATE payments 
+             SET payment_status = 'success',
+                 gateway_transaction_id = ?,
+                 payment_method = ?,
+                 paid_at = NOW(),
+                 payment_notes = 'DEMO PAYMENT (Simulated - No real money transferred)'
+             WHERE id = ?`,
+            [demoPaymentId, sanitizedMethod, orderPayment.id]
+          )
+
+          await connection.query(
+            `UPDATE bookings 
+             SET booking_status = 'confirmed' 
+             WHERE id = ?`,
+            [booking_id]
+          )
+
+          await connection.query(
+            `UPDATE vehicles 
+             SET availability_status = 'booked' 
+             WHERE id = ?`,
+            [booking.vehicle_id]
+          )
+
+          await connection.commit()
+
+          return {
+            success: true,
+            demoMode: true,
+            outcome: 'success',
+            bookingId: booking.id,
+            bookingReference: booking.booking_reference,
+            paymentId: demoPaymentId,
+            amount: expectedTotal,
+            status: 'confirmed',
+            message: 'DEMO PAYMENT successful (Simulated - No real money transferred).'
+          }
+        }
+
+        // Simulated Failed Payment: record failed attempt, keep booking pending, do not book vehicle, do not create refund
+        const reason = (typeof failure_reason === 'string' && failure_reason.trim())
+          ? failure_reason.trim()
+          : 'Simulated payment failure for academic demonstration'
+
+        await connection.query(
+          `UPDATE payments 
+           SET payment_status = 'failed',
+               payment_method = ?,
+               payment_notes = ?
+           WHERE id = ?`,
+          [sanitizedMethod, `DEMO PAYMENT FAILED (Simulated): ${reason}`, orderPayment.id]
+        )
+
+        await connection.commit()
+
+        return {
+          success: false,
+          demoMode: true,
+          outcome: 'failed',
+          bookingId: booking.id,
+          bookingReference: booking.booking_reference,
+          paymentStatus: 'failed',
+          bookingStatus: booking.booking_status,
+          failureReason: reason,
+          message: `DEMO PAYMENT FAILED (Simulated): ${reason}. Your booking remains pending so you can retry payment.`
+        }
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    })
   }
 }
 

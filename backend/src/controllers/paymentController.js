@@ -35,3 +35,13 @@ export const recordFailure = async (req, res) => {
     return sendError(res, error.message, error.statusCode || 400)
   }
 }
+
+export const demoPayment = async (req, res) => {
+  try {
+    const customerId = req.customer.id
+    const result = await paymentService.processDemoPayment(customerId, req.body)
+    return sendSuccess(res, result.message, result)
+  } catch (error) {
+    return sendError(res, error.message, error.statusCode || 400)
+  }
+}
