@@ -11,6 +11,9 @@ export const AVAILABILITY_OPTIONS = [
 
 export const ALL_STATUS_LABELS = {
   available: 'Available',
+  demo: 'Demo – Not Available for Booking',
+  status_unknown: 'Availability Unverified',
+  loading: 'Checking Availability...',
   maintenance: 'Under Maintenance',
   unavailable: 'Unavailable',
   out_of_stock: 'Out of Stock',
@@ -20,6 +23,9 @@ export const ALL_STATUS_LABELS = {
 }
 
 export const BOOKING_BLOCKED_STATUSES = new Set([
+  'demo',
+  'status_unknown',
+  'loading',
   'booked',
   'rented',
   'maintenance',
@@ -30,7 +36,8 @@ export const BOOKING_BLOCKED_STATUSES = new Set([
 
 export const normaliseAvailabilityStatus = (status) => {
   const s = String(status || '').trim().toLowerCase()
-  if (s === 'catalog' || s === 'catalogue' || s === '') return 'available'
+  if (s === 'catalog' || s === 'catalogue' || s === 'demo') return 'demo'
+  if (s === '') return 'available'
   return s
 }
 
@@ -50,6 +57,15 @@ export const isStatusBookingBlocked = (status) => {
 
 export const getBookingUnavailableReason = (status) => {
   const norm = normaliseAvailabilityStatus(status)
+  if (norm === 'demo') {
+    return 'Demo – Not Available for Booking. This model is shown for catalogue demonstration only.'
+  }
+  if (norm === 'status_unknown') {
+    return 'Live fleet availability could not be verified right now. Please retry before booking.'
+  }
+  if (norm === 'loading') {
+    return 'Checking live fleet availability...'
+  }
   if (norm === 'booked') {
     return 'This vehicle is currently booked and cannot be booked at this time.'
   }
@@ -121,7 +137,7 @@ export const matchDbVehicleToCatalog = (dbVehicle, catalogList = []) => {
  */
 export const findMatchingDbUnit = (catalogModel, dbList = []) => {
   if (!catalogModel || !Array.isArray(dbList)) return null
-  return dbList.find((dbV) => {
+  const matches = dbList.filter((dbV) => {
     if (dbV.features?.catalog_id === catalogModel.id) return true
     if (DB_ID_TO_CATALOG_ID[Number(dbV.id)] === catalogModel.id) return true
     const makeL = (dbV.make || '').toLowerCase().trim()
@@ -130,5 +146,7 @@ export const findMatchingDbUnit = (catalogModel, dbList = []) => {
     const cModel = (catalogModel.model || '').toLowerCase().trim()
     const brandMatches = cBrand === makeL || (cBrand.startsWith(makeL) && makeL.length >= 4) || (makeL.startsWith(cBrand) && cBrand.length >= 4)
     return brandMatches && cModel === modelL
-  }) || null
+  })
+  if (matches.length === 0) return null
+  return matches.find((u) => normaliseAvailabilityStatus(u.availability_status) === 'available') || matches[0]
 }

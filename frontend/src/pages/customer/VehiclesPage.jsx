@@ -105,6 +105,8 @@ export default function VehiclesPage() {
   useEffect(() => {
     let isMounted = true
 
+    setIsLoading(true)
+    setApiError(null)
     api.getVehicles({
       category: filters.category !== 'all' ? filters.category : undefined,
       brand: filters.brand || undefined,
@@ -115,9 +117,15 @@ export default function VehiclesPage() {
       maxPrice: filters.maxPrice || undefined,
       sort: sortBy !== 'default' ? sortBy : undefined
     }).then((res) => {
-      if (isMounted && res && res.success && res.data) {
+      if (!isMounted) return
+      if (res && res.success && res.data) {
         setBackendVehicles(res.data.vehicles || [])
         setBackendTotal(res.data.total || 0)
+        setApiError(null)
+      } else {
+        setBackendVehicles([])
+        setBackendTotal(0)
+        setApiError(res?.message || 'Unable to verify live fleet availability.')
       }
     }).catch((err) => {
       if (isMounted) {
@@ -220,7 +228,7 @@ export default function VehiclesPage() {
       const primaryUnit = hasLiveUnits ? liveUnits[0] : null
       const liveStatus = hasLiveUnits
         ? (liveUnits.some((u) => u.availability_status === 'available') ? 'available' : primaryUnit.availability_status)
-        : (model.availabilityStatus || 'available')
+        : (apiError ? 'status_unknown' : (isLoading ? 'loading' : 'demo'))
 
       return {
         ...model,
@@ -268,7 +276,7 @@ export default function VehiclesPage() {
       })
 
     return [...mappedCatalog, ...extraDbModels]
-  }, [dbUnitsByModel])
+  }, [dbUnitsByModel, apiError, isLoading])
 
   // Count of unique models currently available in the database fleet
   const inFleetModelsCount = useMemo(() => {
@@ -552,13 +560,13 @@ export default function VehiclesPage() {
             {/* Results Grid / States */}
             <div className="catalog-results-area">
               {/* Backend API Error Banner (if connection failed) */}
-              {apiError && catalogScope === 'backend' && (
+              {apiError && (
                 <div className="api-error-card" role="alert">
                   <AlertCircle size={20} className="error-icon" />
                   <div className="error-body">
-                    <h4 className="error-title">Backend Connection Issue</h4>
+                    <h4 className="error-title">Live Fleet Availability Unavailable</h4>
                     <p className="error-desc">
-                      {apiError}. Make sure the Express server is running on port 5000.
+                      {apiError} Catalogue models are still shown below, but live booking availability could not be verified.
                     </p>
                   </div>
                   <button

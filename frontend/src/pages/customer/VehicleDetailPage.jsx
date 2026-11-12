@@ -45,6 +45,7 @@ export default function VehicleDetailPage() {
 
   const [vehicle, setVehicle] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [apiError, setApiError] = useState(null)
   const [activePhoto, setActivePhoto] = useState('')
 
   // Search parameters from trip
@@ -68,6 +69,9 @@ export default function VehicleDetailPage() {
     let isMounted = true
 
     async function loadVehicle() {
+      setIsLoading(true)
+      setApiError(null)
+
       // 1. Try to fetch from backend API if ID is numeric
       if (/^\d+$/.test(id)) {
         try {
@@ -87,7 +91,7 @@ export default function VehicleDetailPage() {
       const fallback = getFallbackVehicle(id)
       if (isMounted) {
         if (fallback) {
-          const enriched = { ...fallback, isLiveFleet: false }
+          const enriched = { ...fallback, isLiveFleet: false, availability_status: 'demo' }
           try {
             const res = await api.getVehicles()
             if (isMounted && res && res.success && res.data && res.data.vehicles) {
@@ -101,10 +105,18 @@ export default function VehicleDetailPage() {
                 enriched.daily_rate = matchedDb.daily_rate
                 enriched.security_deposit = matchedDb.security_deposit
                 enriched.image = matchedDb.image || enriched.image
+              } else {
+                enriched.availability_status = 'demo'
               }
+            } else if (isMounted) {
+              enriched.availability_status = 'status_unknown'
+              setApiError(res?.message || 'Unable to verify live fleet availability.')
             }
-          } catch {
-            // Keep catalog representation gracefully
+          } catch (err) {
+            if (isMounted) {
+              enriched.availability_status = 'status_unknown'
+              setApiError(err.message || 'Unable to verify live fleet availability.')
+            }
           }
 
           setVehicle(enriched)
@@ -396,7 +408,14 @@ export default function VehicleDetailPage() {
               </div>
 
               {/* Booking Actions */}
-              {bookingBlocked && (
+              {apiError && (
+                <div className="booking-unavailable-notice" role="alert">
+                  <AlertTriangle size={16} className="notice-icon" />
+                  <span>Live fleet availability check failed: {apiError}</span>
+                </div>
+              )}
+
+              {!apiError && bookingBlocked && (
                 <div className="booking-unavailable-notice" role="status">
                   <AlertTriangle size={16} className="notice-icon" />
                   <span>{unavailableReason}</span>
@@ -411,7 +430,7 @@ export default function VehicleDetailPage() {
                     aria-disabled="true"
                     className="btn btn-book-vehicle btn-book-disabled"
                   >
-                    <span>{statusLabel} — Booking Unavailable</span>
+                    <span>{status === 'demo' ? statusLabel : `${statusLabel} — Booking Unavailable`}</span>
                   </button>
                 ) : (
                   <Link to={bookNowUrl} className="btn btn-primary btn-book-vehicle">

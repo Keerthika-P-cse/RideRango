@@ -80,10 +80,32 @@
   color: #4ade80;
 }
 
-.card-status-badge.status-catalog {
-  background: rgba(148, 163, 184, 0.16);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  color: #cbd5e1;
+.card-status-badge.status-catalog,
+.card-status-badge.status-demo {
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #e2e8f0;
+}
+
+.card-status-badge.status-status-unknown,
+.card-status-badge.status-loading {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+}
+
+.card-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-book-disabled {
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.85;
 }
 
 .card-status-badge.status-booked,

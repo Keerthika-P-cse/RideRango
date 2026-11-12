@@ -1,11 +1,67 @@
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Eye, Fuel, Gauge, Settings, Users } from 'lucide-react'
+import { AlertCircle, ArrowRight, Eye, Fuel, Gauge, Settings, Users } from 'lucide-react'
+import api from '../../services/api.js'
 import { getPopularVehicles } from '../../data/vehiclesData.js'
+import {
+  findMatchingDbUnit,
+  getAvailabilityClass,
+  getAvailabilityLabel,
+  isStatusBookingBlocked,
+  normaliseAvailabilityStatus
+} from '../../utils/vehicleStatusHelper.js'
 import VehicleImage from '../common/VehicleImage.jsx'
 import './PopularVehicles.css'
 
 export default function PopularVehicles() {
-  const popularVehicles = getPopularVehicles()
+  const basePopularVehicles = useMemo(() => getPopularVehicles(), [])
+  const [backendVehicles, setBackendVehicles] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [apiError, setApiError] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    api.getVehicles()
+      .then((res) => {
+        if (!isMounted) return
+        if (res && res.success && res.data) {
+          setBackendVehicles(res.data.vehicles || [])
+          setApiError(null)
+        } else {
+          setBackendVehicles([])
+          setApiError(res?.message || 'Unable to verify live fleet availability.')
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setApiError(err.message || 'Unable to verify live fleet availability.')
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const popularVehicles = useMemo(() => {
+    return basePopularVehicles.map((model) => {
+      const matchedDb = findMatchingDbUnit(model, backendVehicles)
+      const status = matchedDb
+        ? matchedDb.availability_status
+        : (apiError ? 'status_unknown' : (isLoading ? 'loading' : 'demo'))
+
+      return {
+        ...model,
+        primaryDbId: matchedDb ? matchedDb.id : null,
+        pricePerDay: matchedDb ? matchedDb.daily_rate : model.pricePerDay,
+        availabilityStatus: status
+      }
+    })
+  }, [basePopularVehicles, backendVehicles, apiError, isLoading])
 
   return (
     <section className="popular-section-wrapper">
@@ -27,23 +83,41 @@ export default function PopularVehicles() {
           </div>
         </div>
 
+        {apiError && (
+          <div className="popular-api-error" role="alert">
+            <AlertCircle size={16} />
+            <span>Live fleet availability could not be verified ({apiError}).</span>
+          </div>
+        )}
+
         {/* Vehicles Grid */}
         <div className="vehicles-grid">
-          {popularVehicles.map((vehicle) => (
-            <div key={vehicle.id} className="vehicle-card">
-              {/* Photo Area */}
-              <div className="vehicle-image-wrapper">
-                <VehicleImage
-                  vehicle={vehicle}
-                  src={vehicle.image}
-                  alt={`${vehicle.brand} ${vehicle.model}`}
-                  className="vehicle-photo"
-                  loading="lazy"
-                />
-                <div className="vehicle-category-badge">
-                  {vehicle.categoryName}
+          {popularVehicles.map((vehicle) => {
+            const status = normaliseAvailabilityStatus(vehicle.availabilityStatus)
+            const statusClass = getAvailabilityClass(status)
+            const statusLabel = getAvailabilityLabel(status)
+            const isDemo = status === 'demo'
+            const bookingBlocked = isStatusBookingBlocked(status)
+            const targetVehicleId = vehicle.primaryDbId || vehicle.id
+
+            return (
+              <div key={vehicle.id} className="vehicle-card">
+                {/* Photo Area */}
+                <div className="vehicle-image-wrapper">
+                  <VehicleImage
+                    vehicle={vehicle}
+                    src={vehicle.image}
+                    alt={`${vehicle.brand} ${vehicle.model}`}
+                    className="vehicle-photo"
+                    loading="lazy"
+                  />
+                  <div className="vehicle-category-badge">
+                    {vehicle.categoryName}
+                  </div>
+                  <div className={`vehicle-availability-tag status-${statusClass}`}>
+                    {statusLabel}
+                  </div>
                 </div>
-              </div>
 
               {/* Vehicle Content */}
               <div className="vehicle-details">
@@ -85,17 +159,39 @@ export default function PopularVehicles() {
                     </div>
                   </div>
 
-                  <Link
-                    to={`/vehicles/${vehicle.id}`}
-                    className="btn btn-primary vehicle-details-btn"
-                  >
-                    <Eye size={15} />
-                    <span>View Details</span>
-                  </Link>
+                  <div className="popular-card-actions">
+                    <Link
+                      to={`/vehicles/${vehicle.id}`}
+                      className="btn btn-secondary vehicle-details-btn"
+                    >
+                      <Eye size={15} />
+                      <span>View Details</span>
+                    </Link>
+
+                    {bookingBlocked ? (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="btn vehicle-details-btn popular-book-disabled"
+                        title={isDemo ? 'Demo – Not Available for Booking' : statusLabel}
+                      >
+                        <span>{isDemo ? 'Demo Only' : 'Unavailable'}</span>
+                      </button>
+                    ) : (
+                      <Link
+                        to={`/booking?vehicleId=${targetVehicleId}`}
+                        className="btn btn-primary vehicle-details-btn"
+                      >
+                        <span>Book Now</span>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>
