@@ -106,9 +106,12 @@ export default function MyBookingsPage() {
     try {
       const res = await api.cancelBooking(cancellingBooking.id, cancelReason)
       if (res && res.success) {
+        const refundMsg = res.data?.refund_initiated
+          ? ` DEMO 100% refund of ₹${parseFloat(res.data.refund_amount || 0).toLocaleString('en-IN')} (${res.data.refund_status || 'refunded'}) simulated — no real money transferred.`
+          : ''
         setActionMessage({
           type: 'success',
-          text: `Booking ${cancellingBooking.booking_reference} has been cancelled.${res.data?.refund_initiated ? ' Refund request has been initiated.' : ''}`
+          text: `Booking ${cancellingBooking.booking_reference} has been cancelled.${refundMsg}`
         })
         setCancellingBooking(null)
         await fetchBookings()
@@ -343,8 +346,12 @@ export default function MyBookingsPage() {
                       <span className="price-lbl">Total Amount</span>
                       <strong className="price-val">₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}</strong>
                       <span className="payment-indicator">
-                        {isConfirmed ? (
-                          <span className="paid-tag">Paid via {booking.payment_method?.toUpperCase() || 'Razorpay'}</span>
+                        {booking.refund_status ? (
+                          <span className="paid-tag">
+                            DEMO Refund: ₹{parseFloat(booking.refund_amount || booking.paid_amount || booking.total_amount).toLocaleString('en-IN')} ({booking.refund_status})
+                          </span>
+                        ) : isConfirmed ? (
+                          <span className="paid-tag">Paid via {booking.payment_method?.toUpperCase() || 'DEMO'}</span>
                         ) : isPending ? (
                           <span className="unpaid-tag">Payment Pending</span>
                         ) : (
@@ -491,15 +498,23 @@ export default function MyBookingsPage() {
                   </div>
                 </div>
 
-                {/* Payment Record */}
+                {/* Payment & DEMO Refund Record */}
                 <div className="modal-payment-section">
                   <h5 className="breakdown-title">Payment Information</h5>
-                  {selectedBooking.booking_status === 'confirmed' ? (
+                  {selectedBooking.payment_status === 'success' || selectedBooking.booking_status === 'confirmed' ? (
                     <div className="payment-verified-box">
                       <CheckCircle2 size={18} className="verified-icon" />
                       <div>
-                        <strong>Paid & Verified via {selectedBooking.payment_method?.toUpperCase() || 'Razorpay'}</strong>
+                        <strong>Paid & Verified via {selectedBooking.payment_method?.toUpperCase() || 'DEMO'}</strong>
                         <p>Txn Ref: {selectedBooking.transaction_reference || 'CONFIRMED'}</p>
+                      </div>
+                    </div>
+                  ) : selectedBooking.booking_status === 'cancelled' ? (
+                    <div className="payment-pending-box">
+                      <AlertCircle size={18} className="pending-icon" />
+                      <div>
+                        <strong>Booking Cancelled (Unpaid)</strong>
+                        <p>No payment was captured for this booking, so no refund applies.</p>
                       </div>
                     </div>
                   ) : (
@@ -508,6 +523,20 @@ export default function MyBookingsPage() {
                       <div>
                         <strong>Payment is Pending</strong>
                         <p>Complete payment before your trip to confirm your booking.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedBooking.refund_status && (
+                    <div className="payment-verified-box" style={{ marginTop: '10px' }}>
+                      <RotateCcw size={18} className="verified-icon" />
+                      <div>
+                        <strong>
+                          DEMO Refund ({selectedBooking.refund_status.toUpperCase()}) &bull; ₹{parseFloat(selectedBooking.refund_amount || 0).toLocaleString('en-IN')}
+                        </strong>
+                        <p>
+                          Ref: {selectedBooking.refund_reference || 'DEMO-REF'} &bull; 100% simulated refund (no real money transferred)
+                        </p>
                       </div>
                     </div>
                   )}
@@ -567,7 +596,9 @@ export default function MyBookingsPage() {
                   className="cancel-textarea"
                 />
                 <p className="cancel-policy-note">
-                  * As per RideRango cancellation policy, full refund of base rental and security deposit is initiated for cancellations before scheduled pickup time.
+                  {cancellingBooking.payment_status === 'success' || cancellingBooking.booking_status === 'confirmed'
+                    ? `* DEMO Refund Policy: Cancelling before scheduled pickup initiates a 100% simulated refund of ₹${parseFloat(cancellingBooking.paid_amount || cancellingBooking.total_amount).toLocaleString('en-IN')} (no real money is transferred).`
+                    : '* This booking is unpaid. Cancelling will release the reservation with no refund required.'}
                 </p>
               </div>
 

@@ -186,9 +186,16 @@ export default function AdminBookingsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className={`status-pill pill-${b.payment_status === 'success' ? 'confirmed' : 'pending'}`}>
-                        {b.payment_status || 'unpaid'}
-                      </span>
+                      <div className="cell-col">
+                        <span className={`status-pill pill-${b.payment_status === 'success' ? 'confirmed' : 'pending'}`}>
+                          {b.payment_status || 'unpaid'}
+                        </span>
+                        {b.refund_status && (
+                          <span className="cell-sub">
+                            DEMO Refund: ₹{parseFloat(b.refund_amount || 0).toLocaleString('en-IN')} ({b.refund_status})
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span className={`status-pill pill-${b.booking_status}`}>
@@ -268,15 +275,23 @@ export default function AdminBookingsPage() {
                 </div>
 
                 <div className="inspect-info-box">
-                  <span className="box-lbl">Payment Details</span>
+                  <span className="box-lbl">Payment &amp; DEMO Refund Details</span>
                   <div className="pay-status-row">
                     <span className={`status-pill pill-${selectedBooking.payment_status === 'success' ? 'confirmed' : 'pending'}`}>
                       {selectedBooking.payment_status || 'unpaid'}
                     </span>
-                    <span>Method: {selectedBooking.payment_method || 'Razorpay / UPI'}</span>
+                    <span>Method: {selectedBooking.payment_method ? selectedBooking.payment_method.toUpperCase() : 'DEMO'}</span>
                   </div>
-                  <span className="box-val">Ref: {selectedBooking.gateway_transaction_id || selectedBooking.transaction_reference || 'N/A'}</span>
+                  <span className="box-val">Ref: {selectedBooking.transaction_reference || 'N/A'}</span>
                   <span className="box-val">Total Amount: <strong>₹{parseFloat(selectedBooking.total_amount).toLocaleString('en-IN')}</strong></span>
+                  {selectedBooking.refund_status && (
+                    <span className="box-val">
+                      DEMO Refund: <strong>₹{parseFloat(selectedBooking.refund_amount || 0).toLocaleString('en-IN')}</strong> ({selectedBooking.refund_status}) &bull; {selectedBooking.refund_reference || 'DEMO-REF'} (Simulated — no real money transferred)
+                    </span>
+                  )}
+                  {selectedBooking.cancellation_reason && (
+                    <span className="box-val">Cancellation Reason: {selectedBooking.cancellation_reason}</span>
+                  )}
                 </div>
               </div>
 

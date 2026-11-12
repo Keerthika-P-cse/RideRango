@@ -1,5 +1,18 @@
 import pool from '../config/db.js'
 import { enrichVehicleData } from './vehicleService.js'
+import { withDeadlockRetry } from '../utils/dbTransactionHelper.js'
+
+/**
+ * Calculate 100% full demo refund equal to the actual paid amount.
+ * No cancellation deductions or partial refunds are applied.
+ */
+export const calculateFullDemoRefund = (paidAmount) => {
+  const parsed = Number(paidAmount)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0
+  }
+  return Math.round(parsed * 100) / 100
+}
 
 /**
  * Helper to generate unique booking reference: RR-BK-XXXXXX
@@ -145,10 +158,11 @@ export const bookingService = {
     const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
     const totalDays = Math.max(1, Math.ceil(diffHours / 24))
 
-    const connection = await pool.getConnection()
+    return withDeadlockRetry(async () => {
+      const connection = await pool.getConnection()
 
-    try {
-      await connection.beginTransaction()
+      try {
+        await connection.beginTransaction()
 
       // 1. Fetch vehicle with lock to prevent race condition
       const [vehicles] = await connection.query(
@@ -250,12 +264,13 @@ export const bookingService = {
         total_amount: totalAmount,
         booking_status: 'pending'
       }
-    } catch (err) {
-      await connection.rollback()
-      throw err
-    } finally {
-      connection.release()
-    }
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    })
   },
 
   /**
@@ -268,12 +283,23 @@ export const bookingService = {
               v.seating_capacity, v.features_json,
               vc.name as category_name, vc.slug as category_slug,
               c.first_name, c.last_name, c.email, c.phone, c.driving_license_number,
-              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.gateway_transaction_id
+              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.amount as paid_amount,
+              r.transaction_reference as refund_reference, r.payment_status as refund_status,
+              r.amount as refund_amount, r.paid_at as refunded_at, r.payment_notes as refund_notes
        FROM bookings b
        JOIN vehicles v ON b.vehicle_id = v.id
        JOIN vehicle_categories vc ON v.category_id = vc.id
        JOIN customers c ON b.customer_id = c.id
-       LEFT JOIN payments p ON b.id = p.booking_id AND p.payment_status = 'success'
+       LEFT JOIN payments p ON p.id = (
+         SELECT p2.id FROM payments p2
+         WHERE p2.booking_id = b.id AND p2.payment_status = 'success' AND p2.payment_type != 'refund'
+         ORDER BY p2.id DESC LIMIT 1
+       )
+       LEFT JOIN payments r ON r.id = (
+         SELECT r2.id FROM payments r2
+         WHERE r2.booking_id = b.id AND r2.payment_type = 'refund'
+         ORDER BY r2.id DESC LIMIT 1
+       )
        WHERE b.id = ? AND b.customer_id = ?`,
       [bookingId, customerId]
     )
@@ -293,11 +319,22 @@ export const bookingService = {
       `SELECT b.*, 
               v.make, v.model, v.registration_number, v.fuel_type, v.transmission,
               vc.name as category_name, vc.slug as category_slug,
-              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.gateway_transaction_id
+              p.transaction_reference, p.payment_status, p.payment_method, p.paid_at, p.amount as paid_amount,
+              r.transaction_reference as refund_reference, r.payment_status as refund_status,
+              r.amount as refund_amount, r.paid_at as refunded_at, r.payment_notes as refund_notes
        FROM bookings b
        JOIN vehicles v ON b.vehicle_id = v.id
        JOIN vehicle_categories vc ON v.category_id = vc.id
-       LEFT JOIN payments p ON b.id = p.booking_id AND p.payment_status = 'success'
+       LEFT JOIN payments p ON p.id = (
+         SELECT p2.id FROM payments p2
+         WHERE p2.booking_id = b.id AND p2.payment_status = 'success' AND p2.payment_type != 'refund'
+         ORDER BY p2.id DESC LIMIT 1
+       )
+       LEFT JOIN payments r ON r.id = (
+         SELECT r2.id FROM payments r2
+         WHERE r2.booking_id = b.id AND r2.payment_type = 'refund'
+         ORDER BY r2.id DESC LIMIT 1
+       )
        WHERE b.customer_id = ?
        ORDER BY b.created_at DESC`,
       [customerId]
@@ -307,19 +344,39 @@ export const bookingService = {
   },
 
   /**
-   * Cancel customer booking according to business rules
+   * Cancel customer booking according to business rules and process 100% DEMO refund if paid
    */
-  async cancelBooking(bookingId, customerId, reason = '') {
-    const connection = await pool.getConnection()
+  async cancelBooking(bookingId, customerId, reason = '', dbPool = pool) {
+    return withDeadlockRetry(async () => {
+      const connection = await dbPool.getConnection()
 
-    try {
-      await connection.beginTransaction()
+      try {
+        await connection.beginTransaction()
+
+      // Resolve vehicle_id first so we can acquire locks in consistent order (vehicles -> bookings -> payments)
+      const [lookupRows] = await connection.query(
+        `SELECT vehicle_id 
+         FROM bookings 
+         WHERE id = ? AND customer_id = ?`,
+        [bookingId, customerId]
+      )
+
+      if (lookupRows.length === 0) {
+        throw new Error('Booking not found or not owned by you.')
+      }
+
+      const [vehicleRows] = await connection.query(
+        `SELECT id, availability_status 
+         FROM vehicles 
+         WHERE id = ? 
+         FOR UPDATE`,
+        [lookupRows[0].vehicle_id]
+      )
 
       const [rows] = await connection.query(
-        `SELECT b.*, p.id as payment_id, p.payment_status, p.amount as paid_amount 
-         FROM bookings b
-         LEFT JOIN payments p ON b.id = p.booking_id AND p.payment_status = 'success'
-         WHERE b.id = ? AND b.customer_id = ? 
+        `SELECT * 
+         FROM bookings 
+         WHERE id = ? AND customer_id = ? 
          FOR UPDATE`,
         [bookingId, customerId]
       )
@@ -329,6 +386,7 @@ export const bookingService = {
       }
 
       const booking = rows[0]
+      const vehicle = vehicleRows[0] || null
 
       if (booking.booking_status === 'cancelled') {
         throw new Error('This booking has already been cancelled.')
@@ -343,37 +401,119 @@ export const bookingService = {
         throw new Error('Bookings cannot be cancelled after the scheduled pickup time.')
       }
 
+      const normalizedReason = reason ? reason.trim() : 'Customer requested cancellation'
+
       // Update booking status to cancelled
       await connection.query(
         `UPDATE bookings 
          SET booking_status = 'cancelled', 
              cancellation_reason = ? 
          WHERE id = ?`,
-        [reason ? reason.trim() : 'Customer requested cancellation', bookingId]
+        [normalizedReason, bookingId]
       )
 
-      // Restore vehicle availability if no other active/confirmed bookings exist for this vehicle
-      await connection.query(
-        `UPDATE vehicles 
-         SET availability_status = 'available' 
-         WHERE id = ? 
-           AND id NOT IN (
-             SELECT vehicle_id FROM bookings WHERE booking_status IN ('confirmed', 'active') AND id != ?
-           )`,
-        [booking.vehicle_id, bookingId]
-      )
-
-      // If customer has made a payment, record refund initiation
-      let refundRecorded = false
-      if (booking.payment_status === 'success') {
-        const refundTxnRef = `REF-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
-        await connection.query(
-          `INSERT INTO payments 
-           (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, payment_notes)
-           VALUES (?, ?, ?, ?, 'refund', 'upi', 'initiated', 'Automatic cancellation refund request initiated')`,
-          [refundTxnRef, bookingId, customerId, booking.paid_amount || booking.total_amount]
+      // Only restore vehicle availability if currently 'booked' and no other confirmed/active booking exists
+      if (vehicle && vehicle.availability_status === 'booked') {
+        const [otherActiveBookings] = await connection.query(
+          `SELECT id 
+           FROM bookings 
+           WHERE vehicle_id = ? 
+             AND booking_status IN ('confirmed', 'active') 
+             AND id != ? 
+           LIMIT 1 
+           FOR UPDATE`,
+          [booking.vehicle_id, bookingId]
         )
-        refundRecorded = true
+
+        if (otherActiveBookings.length === 0) {
+          await connection.query(
+            `UPDATE vehicles 
+             SET availability_status = 'available' 
+             WHERE id = ? AND availability_status = 'booked'`,
+            [booking.vehicle_id]
+          )
+        }
+      }
+
+      // Check if customer has an actual successful payment for this booking
+      const [paidRows] = await connection.query(
+        `SELECT id, amount, payment_method, transaction_reference 
+         FROM payments 
+         WHERE booking_id = ? 
+           AND customer_id = ? 
+           AND payment_status = 'success' 
+           AND payment_type != 'refund' 
+         ORDER BY id DESC 
+         LIMIT 1 
+         FOR UPDATE`,
+        [bookingId, customerId]
+      )
+
+      let refundRecorded = false
+      let refundAmount = 0
+      let refundStatus = null
+      let refundTxnRef = null
+
+      if (paidRows.length > 0) {
+        const originalPayment = paidRows[0]
+        refundAmount = calculateFullDemoRefund(originalPayment.amount)
+
+        if (refundAmount > 0) {
+          // Prevent duplicate refunds for the same booking/payment
+          const [existingRefunds] = await connection.query(
+            `SELECT id, transaction_reference, payment_status 
+             FROM payments 
+             WHERE booking_id = ? 
+               AND payment_type = 'refund' 
+               AND payment_status IN ('initiated', 'refunded') 
+             LIMIT 1 
+             FOR UPDATE`,
+            [bookingId]
+          )
+
+          if (existingRefunds.length > 0) {
+            throw new Error('A refund has already been initiated or completed for this booking.')
+          }
+
+          refundTxnRef = `DEMO-REF-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+          const validMethods = ['upi', 'net_banking', 'credit_card', 'debit_card', 'cash']
+          const refundMethod = validMethods.includes(String(originalPayment.payment_method || '').toLowerCase())
+            ? originalPayment.payment_method.toLowerCase()
+            : 'upi'
+          const linkedGatewayRef = `DEMO_REFUND_PAY_${originalPayment.id}`
+
+          // 1. Create refund record in 'initiated' status
+          const [insertResult] = await connection.query(
+            `INSERT INTO payments 
+             (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, payment_notes)
+             VALUES (?, ?, ?, ?, 'refund', ?, 'initiated', ?, ?)`,
+            [
+              refundTxnRef,
+              bookingId,
+              customerId,
+              refundAmount,
+              refundMethod,
+              linkedGatewayRef,
+              `DEMO: 100% simulated refund initiated for payment #${originalPayment.id} (no real money transferred)`
+            ]
+          )
+
+          // 2. Complete the simulated DEMO refund by updating status to 'refunded'
+          await connection.query(
+            `UPDATE payments 
+             SET payment_status = 'refunded', 
+                 paid_at = NOW(), 
+                 payment_notes = ? 
+             WHERE id = ?`,
+            [
+              `DEMO: 100% simulated refund completed for payment #${originalPayment.id} (no real money transferred)`,
+              insertResult.insertId
+            ]
+          )
+
+          refundRecorded = true
+          refundStatus = 'refunded'
+        }
       }
 
       await connection.commit()
@@ -381,15 +521,20 @@ export const bookingService = {
       return {
         id: bookingId,
         booking_status: 'cancelled',
-        cancellation_reason: reason || 'Customer requested cancellation',
-        refund_initiated: refundRecorded
+        cancellation_reason: normalizedReason,
+        refund_initiated: refundRecorded,
+        refund_status: refundStatus,
+        refund_amount: refundAmount,
+        refund_reference: refundTxnRef,
+        is_demo_refund: refundRecorded
       }
-    } catch (err) {
-      await connection.rollback()
-      throw err
-    } finally {
-      connection.release()
-    }
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    })
   }
 }
 

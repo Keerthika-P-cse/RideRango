@@ -33,8 +33,24 @@ function createMockDbPool(initialState = {}) {
     async query(sql, params = []) {
       const normalized = sql.replace(/\s+/g, ' ').trim()
 
+      if (normalized.startsWith('SELECT vehicle_id FROM bookings WHERE id = ? AND customer_id = ?')) {
+        const [id, customerId] = params
+        const rows = state.bookings.filter(b => b.id === id && b.customer_id === customerId).map(b => ({ vehicle_id: b.vehicle_id }))
+        return [rows]
+      }
+
+      if (normalized.startsWith('SELECT id, availability_status FROM vehicles WHERE id = ? FOR UPDATE')) {
+        const [vehicleId] = params
+        state.lockOrder = state.lockOrder || []
+        state.lockOrder.push('vehicles')
+        const rows = state.vehicles.filter(v => v.id === vehicleId).map(v => ({ id: v.id, availability_status: v.availability_status }))
+        return [rows]
+      }
+
       if (normalized.startsWith('SELECT id, vehicle_id, booking_reference, total_amount, booking_status FROM bookings')) {
         const [id, customerId] = params
+        state.lockOrder = state.lockOrder || []
+        state.lockOrder.push('bookings')
         const rows = state.bookings.filter(b => b.id === id && b.customer_id === customerId)
         return [rows]
       }

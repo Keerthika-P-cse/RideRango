@@ -8,7 +8,7 @@ export const checkAvailability = async (req, res) => {
     const result = await bookingService.checkAvailability(vehicleId, startDate, endDate, excludeBookingId)
     return sendSuccess(res, 'Availability checked', result)
   } catch (error) {
-    return sendError(res, error.message, 400)
+    return sendError(res, error.message, error.statusCode || 400)
   }
 }
 
@@ -19,10 +19,11 @@ export const createBooking = async (req, res) => {
     return sendSuccess(res, 'Booking created successfully', booking, 201)
   } catch (error) {
     const isConflict =
+      error.statusCode === 409 ||
       error.message.includes('reserved by another customer') ||
       error.message.includes('Already Booked') ||
       error.message.includes('Currently Rented')
-    const status = isConflict ? 409 : 400
+    const status = isConflict ? 409 : (error.statusCode || 400)
     return sendError(res, error.message, status)
   }
 }
@@ -56,6 +57,6 @@ export const cancelBooking = async (req, res) => {
     const result = await bookingService.cancelBooking(id, customerId, reason)
     return sendSuccess(res, 'Booking cancelled successfully', result)
   } catch (error) {
-    return sendError(res, error.message, 400)
+    return sendError(res, error.message, error.statusCode || 400)
   }
 }

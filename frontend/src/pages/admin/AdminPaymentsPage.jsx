@@ -140,11 +140,13 @@ export default function AdminPaymentsPage() {
                     </td>
                     <td>
                       <span className="method-tag">
-                        {p.payment_method ? p.payment_method.toUpperCase() : 'RAZORPAY'}
+                        {p.payment_type === 'refund'
+                          ? 'DEMO REFUND'
+                          : (p.payment_method ? p.payment_method.toUpperCase() : 'DEMO')}
                       </span>
                     </td>
                     <td>
-                      <span className={`status-pill pill-${p.payment_status === 'success' ? 'confirmed' : (p.payment_status === 'initiated' ? 'pending' : 'cancelled')}`}>
+                      <span className={`status-pill pill-${p.payment_status === 'success' ? 'confirmed' : (p.payment_status === 'initiated' ? 'pending' : (p.payment_status === 'refunded' ? 'completed' : 'cancelled'))}`}>
                         {p.payment_status}
                       </span>
                     </td>
@@ -156,8 +158,12 @@ export default function AdminPaymentsPage() {
                       </span>
                     </td>
                     <td>
-                      {p.payment_status === 'refunded' ? (
-                        <span className="status-pill pill-completed">Processed</span>
+                      {p.payment_type === 'refund' ? (
+                        <span className={`status-pill pill-${p.payment_status === 'refunded' ? 'completed' : 'pending'}`}>
+                          DEMO {p.payment_status === 'refunded' ? 'Refunded (Simulated)' : 'Initiated (Simulated)'}
+                        </span>
+                      ) : p.payment_status === 'refunded' ? (
+                        <span className="status-pill pill-completed">DEMO Refunded (Simulated)</span>
                       ) : (
                         <span className="refund-none">No Refund Requested</span>
                       )}

@@ -413,20 +413,33 @@ export const getAdminBookings = async (req, res) => {
              c.email as customer_email, c.phone as customer_phone,
              v.make, v.model, v.registration_number, v.year as vehicle_year,
              vc.name as category_name, vc.slug as category_slug,
-             p.payment_status, p.gateway_transaction_id, p.transaction_reference, p.payment_method
+             p.payment_status, p.transaction_reference, p.payment_method, p.amount as paid_amount,
+             r.payment_status as refund_status, r.amount as refund_amount,
+             r.transaction_reference as refund_reference, r.paid_at as refunded_at, r.payment_notes as refund_notes
       FROM bookings b
       LEFT JOIN customers c ON b.customer_id = c.id
       LEFT JOIN vehicles v ON b.vehicle_id = v.id
       LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
       LEFT JOIN (
-        SELECT p1.booking_id, p1.amount, p1.payment_status, p1.gateway_transaction_id, p1.transaction_reference, p1.payment_method
+        SELECT p1.booking_id, p1.amount, p1.payment_status, p1.transaction_reference, p1.payment_method
         FROM payments p1
         INNER JOIN (
           SELECT booking_id, MAX(id) as max_id
           FROM payments
+          WHERE payment_type != 'refund'
           GROUP BY booking_id
         ) p2 ON p1.id = p2.max_id
       ) p ON b.id = p.booking_id
+      LEFT JOIN (
+        SELECT r1.booking_id, r1.amount, r1.payment_status, r1.transaction_reference, r1.paid_at, r1.payment_notes
+        FROM payments r1
+        INNER JOIN (
+          SELECT booking_id, MAX(id) as max_id
+          FROM payments
+          WHERE payment_type = 'refund'
+          GROUP BY booking_id
+        ) r2 ON r1.id = r2.max_id
+      ) r ON b.id = r.booking_id
       WHERE 1=1
     `
     const params = []

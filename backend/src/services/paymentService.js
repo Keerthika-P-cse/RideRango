@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import Razorpay from 'razorpay'
 import pool from '../config/db.js'
 import { env } from '../config/env.js'
+import { withDeadlockRetry } from '../utils/dbTransactionHelper.js'
 
 // Initialize Razorpay SDK instance if valid key format
 let razorpayInstance = null
@@ -167,23 +168,43 @@ export const paymentService = {
       throw new Error('Razorpay payment gateway is not configured in production.')
     }
 
-    const connection = await dbPool.getConnection()
+    return withDeadlockRetry(async () => {
+      const connection = await dbPool.getConnection()
 
-    try {
-      await connection.beginTransaction()
+      try {
+        await connection.beginTransaction()
 
-      // 2. Fetch and lock booking owned by this customer
-      const [bookings] = await connection.query(
-        `SELECT id, vehicle_id, booking_reference, total_amount, booking_status 
-         FROM bookings 
-         WHERE id = ? AND customer_id = ? 
-         FOR UPDATE`,
-        [booking_id, customerId]
-      )
+        // 2. Resolve vehicle_id first to enforce consistent lock order: Vehicle -> Booking -> Payment
+        const [bookingLookup] = await connection.query(
+          `SELECT vehicle_id 
+           FROM bookings 
+           WHERE id = ? AND customer_id = ?`,
+          [booking_id, customerId]
+        )
 
-      if (bookings.length === 0) {
-        throw new Error('Booking not found or not owned by you.')
-      }
+        if (bookingLookup.length === 0) {
+          throw new Error('Booking not found or not owned by you.')
+        }
+
+        await connection.query(
+          `SELECT id, availability_status 
+           FROM vehicles 
+           WHERE id = ? 
+           FOR UPDATE`,
+          [bookingLookup[0].vehicle_id]
+        )
+
+        const [bookings] = await connection.query(
+          `SELECT id, vehicle_id, booking_reference, total_amount, booking_status 
+           FROM bookings 
+           WHERE id = ? AND customer_id = ? 
+           FOR UPDATE`,
+          [booking_id, customerId]
+        )
+
+        if (bookings.length === 0) {
+          throw new Error('Booking not found or not owned by you.')
+        }
 
       const booking = bookings[0]
 
@@ -348,12 +369,13 @@ export const paymentService = {
         paymentId: razorpay_payment_id,
         status: 'confirmed'
       }
-    } catch (err) {
-      await connection.rollback()
-      throw err
-    } finally {
-      connection.release()
-    }
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    })
   },
 
   /**
