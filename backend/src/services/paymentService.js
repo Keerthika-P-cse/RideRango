@@ -16,6 +16,34 @@ try {
   console.warn('Razorpay SDK initialization notice:', err.message)
 }
 
+/**
+ * Verify Razorpay HMAC-SHA256 payment signature using constant-time comparison.
+ */
+export function verifyRazorpaySignature(orderId, paymentId, signature, secret = env.RAZORPAY.KEY_SECRET) {
+  if (
+    typeof orderId !== 'string' || !orderId.trim() ||
+    typeof paymentId !== 'string' || !paymentId.trim() ||
+    typeof signature !== 'string' || !/^[a-f0-9]{64}$/i.test(signature.trim()) ||
+    typeof secret !== 'string' || !secret
+  ) {
+    return false
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(`${orderId}|${paymentId}`)
+    .digest('hex')
+
+  const providedBuf = Buffer.from(signature.trim().toLowerCase(), 'hex')
+  const expectedBuf = Buffer.from(expectedSignature, 'hex')
+
+  if (providedBuf.length !== expectedBuf.length) {
+    return false
+  }
+
+  return crypto.timingSafeEqual(providedBuf, expectedBuf)
+}
+
 export const paymentService = {
   /**
    * Create Razorpay server-side payment order
@@ -64,12 +92,13 @@ export const paymentService = {
         })
         orderId = order.id
       } catch (err) {
-        console.warn('Razorpay API live call fallback to test mode:', err.message)
-        // Safe fallback in test mode
-        orderId = `order_test_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+        console.error('Razorpay order creation failed:', err.message)
+        throw new Error('Unable to create Razorpay payment order. Please try again shortly.')
       }
+    } else if (env.NODE_ENV === 'production') {
+      throw new Error('Razorpay payment gateway is not configured in production.')
     } else {
-      // Standard Razorpay test order ID simulation
+      // Local non-production development order ID simulation
       orderId = `order_test_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     }
 
@@ -103,40 +132,47 @@ export const paymentService = {
   /**
    * Verify Razorpay payment signature and confirm booking in MySQL
    */
-  async verifyPayment(customerId, payload) {
+  async verifyPayment(customerId, payload, dbPool = pool, razorpayClient = razorpayInstance) {
     const {
       booking_id,
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      payment_method = 'upi'
-    } = payload
+      payment_method = 'upi',
+      amount,
+      currency
+    } = payload || {}
 
-    if (!booking_id || !razorpay_order_id || !razorpay_payment_id) {
+    if (!booking_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       throw new Error('Payment verification parameters missing.')
     }
 
-    // 1. Backend Signature Verification
-    const secret = env.RAZORPAY.KEY_SECRET
-    const text = `${razorpay_order_id}|${razorpay_payment_id}`
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(text)
-      .digest('hex')
+    if (currency !== undefined && String(currency).toUpperCase() !== 'INR') {
+      throw new Error('Unsupported payment currency. Expected INR.')
+    }
 
-    const isTestMode = env.RAZORPAY.KEY_ID.includes('DevKey') || razorpay_order_id.startsWith('order_test_')
-    const isValidSignature = isTestMode || (razorpay_signature && razorpay_signature === expectedSignature)
+    // 1. Strict Backend HMAC-SHA256 Signature Verification (no test-prefix bypass)
+    const isValidSignature = verifyRazorpaySignature(
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      env.RAZORPAY.KEY_SECRET
+    )
 
     if (!isValidSignature) {
       throw new Error('Invalid payment signature. Payment verification failed on server.')
     }
 
-    const connection = await pool.getConnection()
+    if (env.NODE_ENV === 'production' && (!razorpayClient || env.RAZORPAY.KEY_ID.includes('DevKey'))) {
+      throw new Error('Razorpay payment gateway is not configured in production.')
+    }
+
+    const connection = await dbPool.getConnection()
 
     try {
       await connection.beginTransaction()
 
-      // Fetch booking
+      // 2. Fetch and lock booking owned by this customer
       const [bookings] = await connection.query(
         `SELECT id, vehicle_id, booking_reference, total_amount, booking_status 
          FROM bookings 
@@ -151,6 +187,10 @@ export const paymentService = {
 
       const booking = bookings[0]
 
+      if (booking.booking_status === 'cancelled') {
+        throw new Error('Cannot verify payment for a cancelled booking.')
+      }
+
       if (booking.booking_status === 'confirmed') {
         await connection.commit()
         return {
@@ -161,46 +201,129 @@ export const paymentService = {
         }
       }
 
+      if (booking.booking_status !== 'pending') {
+        throw new Error(`Cannot verify payment for a booking with status: ${booking.booking_status}.`)
+      }
+
+      // 3. Verify the Razorpay order belongs to this booking & customer
+      const [orderPayments] = await connection.query(
+        `SELECT id, amount, payment_status 
+         FROM payments 
+         WHERE booking_id = ? AND customer_id = ? AND gateway_transaction_id = ? 
+         ORDER BY id DESC 
+         LIMIT 1 
+         FOR UPDATE`,
+        [booking_id, customerId, razorpay_order_id]
+      )
+
+      if (orderPayments.length === 0) {
+        throw new Error('Payment order not found for this booking and customer.')
+      }
+
+      const orderPayment = orderPayments[0]
+
+      if (orderPayment.payment_status === 'success') {
+        await connection.commit()
+        return {
+          success: true,
+          alreadyConfirmed: true,
+          bookingReference: booking.booking_reference,
+          message: 'Payment has already been verified.'
+        }
+      }
+
+      if (orderPayment.payment_status !== 'initiated') {
+        throw new Error(`Payment order is in '${orderPayment.payment_status}' state and cannot be verified.`)
+      }
+
+      // 4. Prevent duplicate successful payment for the same booking
+      const [existingSuccessPayments] = await connection.query(
+        `SELECT id FROM payments 
+         WHERE booking_id = ? AND payment_status = 'success' 
+         LIMIT 1`,
+        [booking_id]
+      )
+
+      if (existingSuccessPayments.length > 0) {
+        await connection.commit()
+        return {
+          success: true,
+          alreadyConfirmed: true,
+          bookingReference: booking.booking_reference,
+          message: 'Booking already has a verified payment.'
+        }
+      }
+
+      // 5. Verify amount matches booking total (and optional payload amount in paise)
+      const expectedTotal = parseFloat(booking.total_amount)
+      const orderAmount = parseFloat(orderPayment.amount)
+      if (!Number.isFinite(expectedTotal) || !Number.isFinite(orderAmount) || Math.abs(orderAmount - expectedTotal) > 0.01) {
+        throw new Error('Payment amount mismatch with booking total.')
+      }
+
+      const expectedAmountInPaise = Math.round(expectedTotal * 100)
+      if (amount !== undefined && Number(amount) !== expectedAmountInPaise) {
+        throw new Error('Payment amount mismatch with expected order amount.')
+      }
+
+      // 6. Verify payment capture/status via Razorpay API when configured (or injected in tests)
+      const shouldVerifyWithGateway =
+        (razorpayClient && !env.RAZORPAY.KEY_ID.includes('DevKey')) ||
+        (razorpayClient && razorpayClient !== razorpayInstance)
+
+      if (shouldVerifyWithGateway) {
+        let paymentDetails
+        try {
+          paymentDetails = await razorpayClient.payments.fetch(razorpay_payment_id)
+        } catch (gatewayErr) {
+          throw new Error(`Unable to verify payment status with Razorpay: ${gatewayErr.message}`)
+        }
+
+        if (!paymentDetails || paymentDetails.order_id !== razorpay_order_id) {
+          throw new Error('Razorpay payment does not match the expected order ID.')
+        }
+
+        if (String(paymentDetails.currency || '').toUpperCase() !== 'INR') {
+          throw new Error('Razorpay payment currency mismatch. Expected INR.')
+        }
+
+        if (Number(paymentDetails.amount) !== expectedAmountInPaise) {
+          throw new Error('Razorpay payment amount mismatch with expected order amount.')
+        }
+
+        if (paymentDetails.status === 'authorized') {
+          const captured = await razorpayClient.payments.capture(
+            razorpay_payment_id,
+            expectedAmountInPaise,
+            'INR'
+          )
+          if (!captured || captured.status !== 'captured') {
+            throw new Error('Razorpay payment capture did not succeed.')
+          }
+        } else if (paymentDetails.status !== 'captured') {
+          throw new Error(`Razorpay payment is not captured (status: ${paymentDetails.status || 'unknown'}).`)
+        }
+      }
+
       // Allowed payment methods in schema enum
       const validMethods = ['upi', 'net_banking', 'credit_card', 'debit_card', 'cash']
-      const sanitizedMethod = validMethods.includes(payment_method.toLowerCase())
+      const sanitizedMethod = typeof payment_method === 'string' && validMethods.includes(payment_method.toLowerCase())
         ? payment_method.toLowerCase()
         : 'upi'
 
-      // Update or create success payment record
-      const [existingPayments] = await connection.query(
-        `SELECT id FROM payments 
-         WHERE booking_id = ? AND (gateway_transaction_id = ? OR payment_status = 'initiated')
-         ORDER BY id DESC
-         LIMIT 1`,
-        [booking_id, razorpay_order_id]
+      // 6. Mark payment as verified & successful
+      await connection.query(
+        `UPDATE payments 
+         SET payment_status = 'success',
+             gateway_transaction_id = ?,
+             payment_method = ?,
+             paid_at = NOW(),
+             payment_notes = 'Verified via Razorpay'
+         WHERE id = ?`,
+        [razorpay_payment_id, sanitizedMethod, orderPayment.id]
       )
 
-      let paymentId
-      if (existingPayments.length > 0) {
-        paymentId = existingPayments[0].id
-        await connection.query(
-          `UPDATE payments 
-           SET payment_status = 'success',
-               gateway_transaction_id = ?,
-               payment_method = ?,
-               paid_at = NOW(),
-               payment_notes = 'Verified via Razorpay'
-           WHERE id = ?`,
-          [razorpay_payment_id, sanitizedMethod, paymentId]
-        )
-      } else {
-        const txnRef = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
-        const [insertRes] = await connection.query(
-          `INSERT INTO payments 
-           (transaction_reference, booking_id, customer_id, amount, payment_type, payment_method, payment_status, gateway_transaction_id, paid_at, payment_notes)
-           VALUES (?, ?, ?, ?, 'rental_fee', ?, 'success', ?, NOW(), 'Verified via Razorpay')`,
-          [txnRef, booking_id, customerId, booking.total_amount, sanitizedMethod, razorpay_payment_id]
-        )
-        paymentId = insertRes.insertId
-      }
-
-      // Update booking status to confirmed
+      // 7. Update booking status to confirmed
       await connection.query(
         `UPDATE bookings 
          SET booking_status = 'confirmed' 
@@ -208,7 +331,7 @@ export const paymentService = {
         [booking_id]
       )
 
-      // Sync vehicle availability status to booked
+      // 8. Sync vehicle availability status to booked
       await connection.query(
         `UPDATE vehicles 
          SET availability_status = 'booked' 
