@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Car,
@@ -20,7 +20,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -35,10 +35,29 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    loadStats()
+    let isMounted = true
+    adminApi.getDashboardStats()
+      .then((res) => {
+        if (!isMounted) return
+        if (res && res.success && res.data) {
+          setStats(res.data)
+        } else {
+          setError('Failed to load dashboard statistics.')
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Error connecting to analytics service.')
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   if (loading && !stats) {

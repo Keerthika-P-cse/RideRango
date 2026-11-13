@@ -287,7 +287,6 @@ export default function BookingPage() {
   useEffect(() => {
     let isMounted = true
     if (!vehicle || vehicle.isCatalogOnly || !/^\d+$/.test(String(vehicle.id))) {
-      setBookedDates([])
       return
     }
 
@@ -295,6 +294,8 @@ export default function BookingPage() {
       .then((res) => {
         if (isMounted && res?.success && Array.isArray(res.data?.bookedRanges)) {
           setBookedDates(res.data.bookedRanges)
+        } else if (isMounted) {
+          setBookedDates([])
         }
       })
       .catch(() => {

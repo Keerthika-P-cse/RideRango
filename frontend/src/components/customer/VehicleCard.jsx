@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Fuel, Gauge, Settings, Users } from 'lucide-react'
 import VehicleImage from '../common/VehicleImage.jsx'
@@ -9,7 +10,7 @@ import {
 } from '../../utils/vehicleStatusHelper.js'
 import './VehicleCard.css'
 
-export default function VehicleCard({ vehicle, searchContext = '' }) {
+function VehicleCard({ vehicle, searchContext = '' }) {
   if (!vehicle) return null
 
   // Ensure price is properly formatted
@@ -127,3 +128,5 @@ export default function VehicleCard({ vehicle, searchContext = '' }) {
     </div>
   )
 }
+
+export default memo(VehicleCard)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Search,
   AlertTriangle
@@ -13,38 +13,44 @@ export default function AdminPaymentsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const loadPayments = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const res = await adminApi.getPayments()
-      if (res && res.success && res.data) {
-        setPayments(res.data)
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load payments.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadPayments()
+    let isMounted = true
+    adminApi.getPayments()
+      .then((res) => {
+        if (!isMounted) return
+        if (res && res.success && res.data) {
+          setPayments(res.data)
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Failed to load payments.')
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  const filteredPayments = payments.filter((p) => {
-    if (statusFilter !== 'all' && p.payment_status !== statusFilter) return false
-    if (!search.trim()) return true
-    const term = search.toLowerCase()
-    const ref = (p.booking_reference || '').toLowerCase()
-    const txn = (p.gateway_transaction_id || p.transaction_reference || '').toLowerCase()
-    const name = `${p.customer_first_name || ''} ${p.customer_last_name || ''}`.toLowerCase()
-    return ref.includes(term) || txn.includes(term) || name.includes(term)
-  })
+  const filteredPayments = useMemo(() => {
+    return payments.filter((p) => {
+      if (statusFilter !== 'all' && p.payment_status !== statusFilter) return false
+      if (!search.trim()) return true
+      const term = search.toLowerCase()
+      const ref = (p.booking_reference || '').toLowerCase()
+      const txn = (p.gateway_transaction_id || p.transaction_reference || '').toLowerCase()
+      const name = `${p.customer_first_name || ''} ${p.customer_last_name || ''}`.toLowerCase()
+      return ref.includes(term) || txn.includes(term) || name.includes(term)
+    })
+  }, [payments, statusFilter, search])
 
-  const totalCaptured = payments
-    .filter((p) => p.payment_status === 'success')
-    .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  const totalCaptured = useMemo(() => {
+    return payments
+      .filter((p) => p.payment_status === 'success')
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  }, [payments])
 
   return (
     <div className="admin-payments-container">

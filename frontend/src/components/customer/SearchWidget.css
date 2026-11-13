@@ -195,7 +195,7 @@
   box-shadow: 0 4px 14px rgba(229, 35, 46, 0.3);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .search-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -212,7 +212,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .search-widget-container {
     padding: 0 var(--space-md);
   }

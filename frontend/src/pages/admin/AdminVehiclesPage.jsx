@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Edit2, CheckCircle2, X, AlertCircle, Sparkles } from 'lucide-react'
 import adminApi from '../../services/adminApi.js'
 import { useAdminAuth } from '../../context/useAdminAuth.js'
@@ -47,7 +47,7 @@ export default function AdminVehiclesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setError('')
     try {
       const [vRes, cRes] = await Promise.all([
@@ -59,10 +59,24 @@ export default function AdminVehiclesPage() {
     } catch (err) {
       setError(err.message || 'Failed to load vehicle inventory.')
     }
-  }
+  }, [])
 
   useEffect(() => {
-    loadData()
+    let isMounted = true
+    Promise.all([
+      adminApi.getVehicles(),
+      adminApi.getCategories()
+    ]).then(([vRes, cRes]) => {
+      if (!isMounted) return
+      if (vRes?.success && vRes.data) setVehicles(vRes.data)
+      if (cRes?.success && cRes.data) setCategories(cRes.data)
+    }).catch((err) => {
+      if (isMounted) setError(err.message || 'Failed to load vehicle inventory.')
+    })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const handleOpenAddModal = () => {
@@ -199,15 +213,17 @@ export default function AdminVehiclesPage() {
     }
   }
 
-  const filteredVehicles = vehicles.filter((v) => {
-    if (categoryFilter !== 'all' && String(v.category_id) !== String(categoryFilter)) {
-      return false
-    }
-    if (statusFilter !== 'all' && v.availability_status !== statusFilter) {
-      return false
-    }
-    return true
-  })
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter((v) => {
+      if (categoryFilter !== 'all' && String(v.category_id) !== String(categoryFilter)) {
+        return false
+      }
+      if (statusFilter !== 'all' && v.availability_status !== statusFilter) {
+        return false
+      }
+      return true
+    })
+  }, [vehicles, categoryFilter, statusFilter])
 
   return (
     <div className="admin-vehicles-container">

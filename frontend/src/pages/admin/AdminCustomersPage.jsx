@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Search,
   History,
@@ -23,23 +23,25 @@ export default function AdminCustomersPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState('')
 
-  const loadCustomers = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const res = await adminApi.getCustomers()
-      if (res && res.success && res.data) {
-        setCustomers(res.data)
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load customers.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadCustomers()
+    let isMounted = true
+    adminApi.getCustomers()
+      .then((res) => {
+        if (!isMounted) return
+        if (res && res.success && res.data) {
+          setCustomers(res.data)
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Failed to load customers.')
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const handleOpenHistory = async (customer) => {
@@ -59,14 +61,16 @@ export default function AdminCustomersPage() {
     }
   }
 
-  const filteredCustomers = customers.filter((c) => {
-    if (!search.trim()) return true
-    const term = search.toLowerCase()
-    const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase()
-    const email = (c.email || '').toLowerCase()
-    const phone = (c.phone || '').toLowerCase()
-    return name.includes(term) || email.includes(term) || phone.includes(term)
-  })
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      if (!search.trim()) return true
+      const term = search.toLowerCase()
+      const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase()
+      const email = (c.email || '').toLowerCase()
+      const phone = (c.phone || '').toLowerCase()
+      return name.includes(term) || email.includes(term) || phone.includes(term)
+    })
+  }, [customers, search])
 
   return (
     <div className="admin-customers-container">

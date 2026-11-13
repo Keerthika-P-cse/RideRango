@@ -42,8 +42,8 @@
 }
 
 .search-input-box:focus-within {
-  border-color: #e50914;
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
+  border-color: var(--color-primary, #e5232e);
+  box-shadow: 0 0 0 3px rgba(229, 35, 46, 0.15);
 }
 
 .search-icon {
@@ -101,10 +101,10 @@
 }
 
 .status-tab-btn.active {
-  background: #e50914;
-  border-color: #e50914;
+  background: var(--color-primary, #e5232e);
+  border-color: var(--color-primary, #e5232e);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
+  box-shadow: 0 4px 12px rgba(229, 35, 46, 0.35);
 }
 
 /* BOOKING MODAL */
@@ -302,12 +302,12 @@
 }
 
 .select-status-dropdown:focus {
-  border-color: #e50914;
+  border-color: var(--color-primary, #e5232e);
 }
 
 .btn-update-status {
   align-self: flex-end;
-  background: #e50914;
+  background: var(--color-primary, #e5232e);
   border: none;
   color: #ffffff;
   padding: 10px 20px;

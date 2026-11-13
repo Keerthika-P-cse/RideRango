@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #e50914;
+  background: var(--color-primary, #e5232e);
   color: #ffffff;
   border: none;
   padding: 10px 20px;
@@ -98,7 +98,7 @@
 }
 
 .filter-group select:focus {
-  border-color: #e50914;
+  border-color: var(--color-primary, #e5232e);
 }
 
 .results-badge {
@@ -159,7 +159,7 @@
 }
 
 .status-inline-select:focus {
-  border-color: #e50914;
+  border-color: var(--color-primary, #e5232e);
 }
 
 .status-inline-select:disabled {
@@ -362,8 +362,8 @@
 
 .modal-form-grid .form-field input:focus,
 .modal-form-grid .form-field select:focus {
-  border-color: #e50914;
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
+  border-color: var(--color-primary, #e5232e);
+  box-shadow: 0 0 0 3px rgba(229, 35, 46, 0.15);
 }
 
 .modal-actions-row {
@@ -376,8 +376,8 @@
 }
 
 .catalogue-preset-field {
-  background: rgba(229, 9, 20, 0.08);
-  border: 1px dashed rgba(229, 9, 20, 0.35);
+  background: rgba(229, 35, 46, 0.08);
+  border: 1px dashed rgba(229, 35, 46, 0.35);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -392,12 +392,12 @@
 }
 
 .preset-sparkle {
-  color: #e50914;
+  color: var(--color-primary, #e5232e);
 }
 
 .select-catalogue-preset {
   background: #0b0f17 !important;
-  border-color: rgba(229, 9, 20, 0.4) !important;
+  border-color: rgba(229, 35, 46, 0.4) !important;
   color: #f8fafc !important;
   font-weight: 600 !important;
 }
@@ -420,7 +420,7 @@
 }
 
 .btn-modal-submit {
-  background: #e50914;
+  background: var(--color-primary, #e5232e);
   border: none;
   color: #ffffff;
   padding: 10px 22px;
@@ -429,7 +429,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
-  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.35);
+  box-shadow: 0 4px 14px rgba(229, 35, 46, 0.35);
 }
 
 .btn-modal-submit:hover:not(:disabled) {

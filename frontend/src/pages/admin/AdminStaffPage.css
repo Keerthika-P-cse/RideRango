@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #e50914;
+  background: var(--color-primary, #e5232e);
   color: #ffffff;
   border: none;
   padding: 10px 20px;

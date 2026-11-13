@@ -7,6 +7,7 @@ import {
   Clock,
   CreditCard,
   Eye,
+  FileText,
   MapPin,
   RefreshCw,
   RotateCcw,
@@ -16,6 +17,7 @@ import {
 import api from '../../services/api.js'
 import { useAuth } from '../../context/useAuth.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
+import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -29,10 +31,26 @@ export default function MyBookingsPage() {
   // Modal states
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [cancellingBooking, setCancellingBooking] = useState(null)
+  const [receiptBooking, setReceiptBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now())
+
+  // Safeguard: Check if booking has verified paid payment and no refund
+  const isEligibleForReceipt = (b) => {
+    if (!b) return false
+    const hasSuccessfulPayment =
+      b.payment_status === 'success' ||
+      (b.booking_status === 'confirmed' && Boolean(b.paid_at))
+    const isRefunded = Boolean(b.refund_status || b.payment_status === 'refunded')
+    return (
+      hasSuccessfulPayment &&
+      !isRefunded &&
+      b.booking_status !== 'pending' &&
+      b.booking_status !== 'cancelled'
+    )
+  }
 
   const fetchBookings = async () => {
     if (!isAuthenticated) return
@@ -374,6 +392,18 @@ export default function MyBookingsPage() {
                         <span>Details</span>
                       </button>
 
+                      {isEligibleForReceipt(booking) && (
+                        <button
+                          type="button"
+                          onClick={() => setReceiptBooking(booking)}
+                          className="btn btn-secondary btn-action btn-receipt-card-btn"
+                          title="View and print official payment receipt"
+                        >
+                          <FileText size={15} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
+
                       {isPending && (
                         <Link
                           to={`/payment/${booking.id}`}
@@ -574,6 +604,17 @@ export default function MyBookingsPage() {
                     <span>Pay ₹{parseFloat(selectedBooking.total_amount).toLocaleString('en-IN')}</span>
                   </Link>
                 )}
+                {isEligibleForReceipt(selectedBooking) && (
+                  <button
+                    type="button"
+                    onClick={() => setReceiptBooking(selectedBooking)}
+                    className="btn btn-receipt-modal-trigger"
+                    title="View and print official payment receipt"
+                  >
+                    <FileText size={16} />
+                    <span>Payment Receipt</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelectedBooking(null)}
@@ -636,6 +677,14 @@ export default function MyBookingsPage() {
             </div>
           </div>
         )}
+
+        {/* PAYMENT RECEIPT MODAL */}
+        <PaymentReceiptModal
+          isOpen={Boolean(receiptBooking)}
+          onClose={() => setReceiptBooking(null)}
+          bookingId={receiptBooking?.id}
+          booking={receiptBooking}
+        />
       </div>
     </div>
   )

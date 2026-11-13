@@ -1,0 +1,852 @@
+/* ==========================================================================
+   RideRango - Payment Receipt Modal & Document Styles
+   Includes screen modal styling and high-fidelity A4 @media print stylesheet
+   ========================================================================== */
+
+/* 1. Modal Backdrop & Container */
+.receipt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(5, 7, 10, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.receipt-modal-container {
+  width: 100%;
+  max-width: 820px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin: auto;
+}
+
+/* 2. Top Bar (Screen Only) */
+.receipt-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #171b22;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  color: #f1f5f9;
+}
+
+.receipt-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.receipt-modal-heading .heading-icon {
+  color: #e5232e;
+}
+
+.receipt-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.btn-receipt-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: none;
+}
+
+.btn-receipt-print {
+  background: #e5232e;
+  color: #ffffff;
+}
+
+.btn-receipt-print:hover {
+  background: #cf1d27;
+  transform: translateY(-1px);
+}
+
+.btn-receipt-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-receipt-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* 3. State Cards (Loading, Error, Warning) */
+.receipt-state-card {
+  background: #15181e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 12px 12px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: #f1f5f9;
+}
+
+.receipt-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(229, 35, 46, 0.2);
+  border-top-color: #e5232e;
+  border-radius: 50%;
+  animation: receiptSpin 0.75s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes receiptSpin {
+  to { transform: rotate(360deg); }
+}
+
+.state-icon {
+  margin-bottom: 0.75rem;
+}
+
+.error-icon {
+  color: #ef4444;
+}
+
+.warning-icon {
+  color: #f59e0b;
+}
+
+.receipt-state-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-state-card p {
+  font-size: 0.9375rem;
+  color: #94a3b8;
+  max-width: 520px;
+  margin: 0 auto 1.25rem;
+  line-height: 1.5;
+}
+
+.state-details-row {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  color: #cbd5e1;
+  margin-bottom: 1.5rem;
+}
+
+.status-badge-inline {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.btn-state-action {
+  padding: 0.5rem 1.5rem;
+  background: #282d37;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 4. The Authoritative Receipt Document (Screen View) */
+.riderango-receipt-card {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 0 0 12px 12px;
+  padding: 2.25rem 2.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow-y: auto;
+  max-height: calc(94vh - 54px);
+  position: relative;
+}
+
+/* DEMO Notice Banner */
+.receipt-demo-banner {
+  background: #fef3c7;
+  border: 1px dashed #d97706;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  color: #92400e;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.receipt-demo-banner .demo-tag {
+  display: block;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  color: #b45309;
+}
+
+/* Document Header */
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-brand-col {
+  flex: 1;
+}
+
+.receipt-brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-logo-mark {
+  width: 40px;
+  height: 40px;
+  background: #e5232e;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1.125rem;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.receipt-brand-name {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1;
+  margin: 0;
+}
+
+.receipt-brand-tagline {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e5232e;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.receipt-company-meta {
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+
+.receipt-doc-meta-col {
+  text-align: right;
+}
+
+.doc-type-badge {
+  display: inline-block;
+  margin-bottom: 0.625rem;
+}
+
+.doc-type-label {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0f172a;
+  border-bottom: 2px solid #e5232e;
+  padding-bottom: 0.25rem;
+}
+
+.doc-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  font-size: 0.8125rem;
+}
+
+.meta-pair {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.meta-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.meta-val {
+  color: #0f172a;
+}
+
+.meta-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+
+.receipt-num-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  color: #e5232e;
+}
+
+.status-paid-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+}
+
+.receipt-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 1.25rem 0 1.5rem;
+}
+
+/* 5. Customer & Vehicle Grid */
+.receipt-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-info-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.125rem;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-card-header h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  margin: 0;
+}
+
+.info-icon {
+  color: #e5232e;
+}
+
+.info-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.info-row .lbl {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.info-row .val {
+  color: #0f172a;
+  text-align: right;
+}
+
+.reg-plate {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* 6. Itinerary Section */
+.receipt-itinerary-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.itinerary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1.5rem;
+}
+
+.itin-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.itin-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.itin-icon {
+  color: #e5232e;
+}
+
+.itin-time {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.itin-location {
+  font-size: 0.8125rem;
+  color: #475569;
+}
+
+.itin-duration-col {
+  text-align: right;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 1.5rem;
+}
+
+.itin-duration-val {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #e5232e;
+}
+
+.itin-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* 7. Financial Breakdown Table */
+.receipt-financial-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  margin: 0 0 0.625rem;
+}
+
+.receipt-pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.receipt-pricing-table thead tr {
+  background: #f1f5f9;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.receipt-pricing-table th {
+  padding: 0.625rem 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.th-desc { text-align: left; }
+.th-rate { text-align: right; }
+.th-qty  { text-align: center; }
+.th-amt  { text-align: right; }
+
+.receipt-pricing-table tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.receipt-pricing-table td {
+  padding: 0.75rem;
+  vertical-align: top;
+  color: #1e293b;
+}
+
+.td-desc strong {
+  display: block;
+  font-size: 0.8125rem;
+  color: #0f172a;
+}
+
+.td-desc .td-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.125rem;
+}
+
+.td-rate { text-align: right; color: #475569; }
+.td-qty  { text-align: center; color: #475569; }
+.td-amt  { text-align: right; font-weight: 600; color: #0f172a; }
+
+.tr-total td {
+  padding: 0.875rem 0.75rem;
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+}
+
+.td-total-label {
+  text-align: right;
+  font-weight: 800;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f172a;
+}
+
+.td-total-amount {
+  text-align: right;
+  font-weight: 900;
+  font-size: 1.125rem;
+  color: #e5232e;
+}
+
+/* 8. Payment Transaction Details Box */
+.receipt-payment-meta-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1.5rem;
+}
+
+.payment-meta-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+  color: #334155;
+}
+
+.payment-meta-title-row h4 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.payment-meta-title-row .pay-icon {
+  color: #e5232e;
+}
+
+.payment-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem 1.5rem;
+  font-size: 0.8125rem;
+}
+
+.pay-pair {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.pay-lbl {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pay-val {
+  color: #0f172a;
+  text-align: right;
+}
+
+.pay-notes-row {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pay-notes-text {
+  color: #475569;
+  font-style: italic;
+}
+
+/* 9. Receipt Footer */
+.receipt-footer {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.receipt-seal-box {
+  flex-shrink: 0;
+}
+
+.seal-circle {
+  width: 96px;
+  height: 96px;
+  border: 2px dashed #16a34a;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+  transform: rotate(-6deg);
+  background: rgba(22, 163, 74, 0.03);
+}
+
+.seal-icon {
+  color: #16a34a;
+}
+
+.seal-text {
+  font-size: 0.5625rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 0.125rem;
+}
+
+.receipt-footer-notes {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.receipt-footer-notes p {
+  margin: 0 0 0.375rem;
+}
+
+.footer-copyright {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  margin: 0 !important;
+}
+
+/* ==========================================================================
+   10. A4-FRIENDLY @media print STYLESHEET
+   Ensures clean physical printout & PDF generation with zero screen clutter
+   ========================================================================== */
+
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm 10mm 12mm;
+}
+
+@media print {
+  /* Hide all external elements and UI wrappers */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide everything in the page by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only the receipt document visible */
+  .payment-receipt-print-area,
+  .payment-receipt-print-area * {
+    visibility: visible;
+  }
+
+  /* Completely eliminate non-printable components */
+  .no-print,
+  .receipt-modal-topbar,
+  .receipt-modal-backdrop,
+  header:not(.receipt-header),
+  nav,
+  footer:not(.receipt-footer) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 0 !important;
+  }
+
+  /* Format receipt document to fill full printable area cleanly */
+  .payment-receipt-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    max-height: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Page break rules */
+  .receipt-header,
+  .receipt-two-col-grid,
+  .receipt-itinerary-card,
+  .receipt-financial-section,
+  .receipt-payment-meta-box,
+  .receipt-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .receipt-pricing-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ensure borders and backgrounds print with contrast */
+  .receipt-info-card,
+  .receipt-itinerary-card,
+  .receipt-payment-meta-box {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .receipt-pricing-table thead tr {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+  }
+
+  .status-paid-pill {
+    border: 1px solid #16a34a !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+  }
+
+  .seal-circle {
+    border: 2px dashed #16a34a !important;
+    color: #16a34a !important;
+  }
+
+  .receipt-demo-banner {
+    border: 1px dashed #d97706 !important;
+    background: #fef3c7 !important;
+    color: #92400e !important;
+  }
+}
+
+/* Responsive adjustment for small screens */
+@media (max-width: 640px) {
+  .riderango-receipt-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .receipt-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .receipt-doc-meta-col {
+    text-align: left;
+    width: 100%;
+  }
+
+  .meta-pair {
+    justify-content: space-between;
+  }
+
+  .receipt-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .itinerary-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .itin-duration-col {
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+    padding-left: 0;
+    padding-top: 0.75rem;
+    text-align: left;
+  }
+
+  .payment-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .receipt-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

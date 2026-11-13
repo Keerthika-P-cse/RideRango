@@ -104,7 +104,7 @@
 }
 
 .metric-card:hover::before {
-  background: #e50914;
+  background: var(--color-primary, #e5232e);
 }
 
 .card-top {

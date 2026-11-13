@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   UserPlus,
   ShieldAlert,
@@ -35,7 +35,7 @@ export default function AdminStaffPage() {
   const [submitting, setSubmitting] = useState(false)
   const [modalError, setModalError] = useState('')
 
-  const loadStaff = async () => {
+  const loadStaff = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -48,11 +48,28 @@ export default function AdminStaffPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    if (isAdmin) {
-      loadStaff()
+    if (!isAdmin) return
+
+    let isMounted = true
+    adminApi.getStaff()
+      .then((res) => {
+        if (!isMounted) return
+        if (res && res.success && res.data) {
+          setStaffList(res.data)
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Failed to load staff accounts.')
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
     }
   }, [isAdmin])
 

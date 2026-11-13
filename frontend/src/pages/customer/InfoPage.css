@@ -1,14 +1,17 @@
 .info-page-wrapper {
   min-height: calc(100vh - 80px);
-  padding: 48px 24px 80px;
-  background: #0f1115;
+  padding: var(--space-2xl) var(--space-xl) var(--space-4xl);
+  background: var(--color-bg);
   color: #f3f4f6;
   font-family: inherit;
+  width: 100%;
 }
 
 .info-page-container {
   max-width: 860px;
+  width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .info-header {
@@ -23,8 +26,8 @@
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: rgba(229, 9, 20, 0.12);
-  color: #e50914;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
   margin-bottom: 16px;
 }
 
@@ -62,19 +65,19 @@
 
 .faq-card {
   border-radius: 12px;
-  background: #181b22;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   overflow: hidden;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .faq-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--color-border-light);
 }
 
 .faq-card.open {
-  border-color: rgba(229, 9, 20, 0.4);
-  background: #1c2029;
+  border-color: rgba(229, 35, 46, 0.4);
+  background: var(--color-surface-light);
 }
 
 .faq-question-btn {
@@ -102,7 +105,7 @@
 
 .faq-card.open .faq-chevron {
   transform: rotate(180deg);
-  color: #e50914;
+  color: var(--color-primary);
 }
 
 .faq-answer-body {
@@ -116,8 +119,8 @@
 }
 
 .policy-content {
-  background: #181b22;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 32px;
   margin-bottom: 40px;

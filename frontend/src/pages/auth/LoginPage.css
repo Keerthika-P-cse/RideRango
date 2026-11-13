@@ -1,8 +1,8 @@
 .unified-login-page {
   min-height: calc(100vh - 80px);
   padding: 40px 16px 80px;
-  background-color: #0b0f17;
-  background-image: radial-gradient(circle at 50% 20%, #161f2e 0%, #0b0f17 70%);
+  background-color: var(--color-bg);
+  background-image: radial-gradient(circle at 50% 20%, #15181e 0%, var(--color-bg) 70%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,8 +35,8 @@
 
 /* MAIN UNIFIED CARD */
 .unified-login-card {
-  background: #121824;
-  border: 1px solid #1f2937;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 34px 30px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
@@ -59,9 +59,9 @@
   width: 38px;
   height: 38px;
   border-radius: 8px;
-  background: rgba(229, 9, 20, 0.15);
-  border: 1px solid rgba(229, 9, 20, 0.3);
-  color: #e50914;
+  background: var(--color-primary-subtle);
+  border: 1px solid rgba(229, 35, 46, 0.3);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,7 +75,7 @@
 }
 
 .logo-accent {
-  color: #e50914;
+  color: var(--color-primary);
 }
 
 .login-main-title {
@@ -96,8 +96,8 @@
 /* TWO-OPTION PORTAL SWITCH */
 .portal-switch-wrapper {
   display: flex;
-  background: #0b0f17;
-  border: 1px solid #2d3748;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 4px;
   margin-bottom: 24px;
@@ -125,10 +125,10 @@
 }
 
 .portal-tab-btn.active {
-  background: #e50914;
+  background: var(--color-primary);
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
+  box-shadow: 0 4px 12px rgba(229, 35, 46, 0.35);
 }
 
 /* FEEDBACK ALERTS */
@@ -224,8 +224,8 @@
 .auth-form .input-box input:focus,
 .unified-login-card .input-box input:focus,
 .input-box input:focus {
-  border-color: #e50914;
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
 /* Hide browser default password reveal and clear icons (Edge/IE/Chromium) to avoid duplicate eye icons */
@@ -306,8 +306,8 @@
 }
 
 .btn-fill-demo:hover {
-  background: #e50914;
-  border-color: #e50914;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* STAFF DEMO CREDENTIALS BOX */
@@ -383,7 +383,7 @@
   margin-top: 6px;
   font-size: 0.95rem;
   font-weight: 700;
-  background: #e50914;
+  background: var(--color-primary);
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -392,7 +392,7 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  background: #b90710;
+  background: var(--color-primary-hover);
 }
 
 .auth-submit-btn:disabled {
@@ -413,7 +413,7 @@
 .btn-text-link {
   background: transparent;
   border: none;
-  color: #e50914;
+  color: var(--color-primary);
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;

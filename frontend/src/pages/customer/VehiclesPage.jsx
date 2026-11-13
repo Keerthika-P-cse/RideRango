@@ -105,8 +105,6 @@ export default function VehiclesPage() {
   useEffect(() => {
     let isMounted = true
 
-    setIsLoading(true)
-    setApiError(null)
     api.getVehicles({
       category: filters.category !== 'all' ? filters.category : undefined,
       brand: filters.brand || undefined,

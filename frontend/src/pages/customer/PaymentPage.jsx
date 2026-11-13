@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  FileText,
   Lock,
   MapPin,
   Shield,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api.js'
 import { useAuth } from '../../context/useAuth.js'
+import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx'
 import './PaymentPage.css'
 
 export default function PaymentPage() {
@@ -31,6 +33,7 @@ export default function PaymentPage() {
   const [selectedMethod, setSelectedMethod] = useState('upi')
   const [showTestModal, setShowTestModal] = useState(false)
   const [testOrderData, setTestOrderData] = useState(null)
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
 
   // Redirect unauthenticated customers
   useEffect(() => {
@@ -188,6 +191,11 @@ export default function PaymentPage() {
           paymentId: res.data?.paymentId || verificationPayload.razorpay_payment_id
         })
         setShowTestModal(false)
+        if (booking?.id) {
+          api.getBookingById(booking.id).then((fresh) => {
+            if (fresh?.success && fresh?.data) setBooking(fresh.data)
+          }).catch(() => {})
+        }
       } else {
         throw new Error(res?.message || 'Payment verification failed.')
       }
@@ -226,6 +234,11 @@ export default function PaymentPage() {
           isDemo: true
         })
         setShowTestModal(false)
+        if (booking?.id) {
+          api.getBookingById(booking.id).then((fresh) => {
+            if (fresh?.success && fresh?.data) setBooking(fresh.data)
+          }).catch(() => {})
+        }
       } else {
         setShowTestModal(false)
         setError(
@@ -347,6 +360,15 @@ export default function PaymentPage() {
             </div>
 
             <div className="success-actions-row">
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(true)}
+                className="btn btn-receipt-view-action"
+                title="View and print official payment receipt"
+              >
+                <FileText size={16} />
+                <span>View Payment Receipt</span>
+              </button>
               <Link to="/my-bookings" className="btn btn-primary">
                 <span>View in My Bookings</span>
               </Link>
@@ -356,6 +378,13 @@ export default function PaymentPage() {
             </div>
           </div>
         </div>
+
+        <PaymentReceiptModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          bookingId={booking?.id}
+          booking={booking}
+        />
       </div>
     )
   }
