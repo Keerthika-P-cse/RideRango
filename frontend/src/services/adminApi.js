@@ -98,6 +98,15 @@ export const adminApi = {
   updateBookingStatus: (id, status) =>
     adminRequest(`/admin/bookings/${id}/status`, { method: 'PUT', body: { status } }),
 
+  // Phase 3: Driving Licence Document Verification
+  getAdminDocuments: () =>
+    adminRequest('/documents/admin/list'),
+  verifyAdminDocument: (bookingId, action, reason = '') =>
+    adminRequest(`/documents/admin/${bookingId}/verify`, {
+      method: 'PUT',
+      body: { action, reason }
+    }),
+
   // Customers
   getCustomers: () => adminRequest('/admin/customers'),
   getCustomerHistory: (id) => adminRequest(`/admin/customers/${id}/bookings`),

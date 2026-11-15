@@ -12,7 +12,8 @@ import {
   Shield,
   ShieldAlert,
   Menu,
-  X
+  X,
+  FileCheck
 } from 'lucide-react'
 import { useAdminAuth } from '../context/useAdminAuth.js'
 import './AdminLayout.css'
@@ -112,6 +113,15 @@ export default function AdminLayout() {
           >
             <CalendarCheck size={18} />
             <span>Manage Bookings</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/documents"
+            onClick={closeMobileMenu}
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          >
+            <FileCheck size={18} />
+            <span>DL Verification</span>
           </NavLink>
 
           <NavLink

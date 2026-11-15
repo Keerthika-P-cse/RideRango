@@ -28,6 +28,13 @@ export default function AdminBookingsPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [updateError, setUpdateError] = useState('')
 
+  // Driving Licence Verification in Booking Modal
+  const [bookingDoc, setBookingDoc] = useState(null)
+  const [loadingDoc, setLoadingDoc] = useState(false)
+  const [docActionLoading, setDocActionLoading] = useState(false)
+  const [docActionError, setDocActionError] = useState('')
+  const [previewImage, setPreviewImage] = useState(null)
+
   const loadBookings = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -53,10 +60,52 @@ export default function AdminBookingsPage() {
     return () => clearTimeout(delayDebounce)
   }, [loadBookings])
 
+  const loadBookingDoc = async (b) => {
+    setLoadingDoc(true)
+    setDocActionError('')
+    try {
+      const res = await adminApi.getAdminDocuments()
+      if (res && res.success && Array.isArray(res.data)) {
+        const found = res.data.find(
+          (d) => d.booking_id === b.id || d.booking_reference === b.booking_reference
+        )
+        setBookingDoc(found || { status: 'not_submitted' })
+      } else {
+        setBookingDoc({ status: 'not_submitted' })
+      }
+    } catch {
+      setBookingDoc({ status: 'not_submitted' })
+    } finally {
+      setLoadingDoc(false)
+    }
+  }
+
+  const handleDocAction = async (action, reason = '') => {
+    if (!selectedBooking) return
+    setDocActionLoading(true)
+    setDocActionError('')
+    try {
+      const res = await adminApi.verifyAdminDocument(selectedBooking.id, action, reason)
+      if (res && res.success) {
+        setBookingDoc((prev) => ({
+          ...prev,
+          status: action === 'accept' ? 'accepted' : 'rejected',
+          raw_status: action === 'accept' ? 'verified' : 'rejected',
+          rejection_reason: action === 'reject' ? (reason || 'Document image is unclear or invalid.') : null
+        }))
+      }
+    } catch (err) {
+      setDocActionError(err.message || `Failed to ${action} document.`)
+    } finally {
+      setDocActionLoading(false)
+    }
+  }
+
   const handleOpenDetailModal = (b) => {
     setSelectedBooking(b)
     setNewStatus(b.booking_status)
     setUpdateError('')
+    loadBookingDoc(b)
   }
 
   const handleUpdateStatus = async (e) => {
@@ -324,6 +373,94 @@ export default function AdminBookingsPage() {
                 </div>
               </div>
 
+              {/* Driving Licence Verification Card */}
+              <div className="inspect-dl-box">
+                <div className="inspect-dl-header">
+                  <div className="dl-title-cluster">
+                    <span className="box-lbl">Driving Licence Verification</span>
+                    <span className="dl-sub-note">Demo document verification for vehicle handover</span>
+                  </div>
+                  {bookingDoc && (
+                    <span className={`doc-status-badge badge-${bookingDoc.status || 'not_submitted'}`}>
+                      {bookingDoc.status === 'accepted' ? 'Accepted' :
+                       bookingDoc.status === 'rejected' ? 'Rejected' :
+                       bookingDoc.status === 'pending' ? 'Pending Review' : 'Not Submitted'}
+                    </span>
+                  )}
+                </div>
+
+                {loadingDoc ? (
+                  <p className="dl-empty-note">Checking document submission status...</p>
+                ) : !bookingDoc || bookingDoc.status === 'not_submitted' ? (
+                  <p className="dl-empty-note">Customer has not uploaded driving licence documents for this reservation yet.</p>
+                ) : (
+                  <div className="dl-preview-content">
+                    <div className="dl-thumbs-row">
+                      <div className="dl-thumb-col">
+                        <span className="dl-side-label">Front Side</span>
+                        {bookingDoc.front_url ? (
+                          <div className="dl-img-wrapper" onClick={() => setPreviewImage(bookingDoc.front_url)}>
+                            <img src={bookingDoc.front_url} alt="DL Front" className="dl-thumb-img" />
+                            <span className="dl-zoom-hint"><Eye size={12} /> View</span>
+                          </div>
+                        ) : (
+                          <div className="dl-missing-thumb">Missing</div>
+                        )}
+                      </div>
+
+                      <div className="dl-thumb-col">
+                        <span className="dl-side-label">Back Side</span>
+                        {bookingDoc.back_url ? (
+                          <div className="dl-img-wrapper" onClick={() => setPreviewImage(bookingDoc.back_url)}>
+                            <img src={bookingDoc.back_url} alt="DL Back" className="dl-thumb-img" />
+                            <span className="dl-zoom-hint"><Eye size={12} /> View</span>
+                          </div>
+                        ) : (
+                          <div className="dl-missing-thumb">Missing</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {bookingDoc.rejection_reason && (
+                      <div className="dl-reason-note">
+                        <strong>Rejection Reason:</strong> {bookingDoc.rejection_reason}
+                      </div>
+                    )}
+
+                    {docActionError && (
+                      <div className="modal-error-box" style={{ marginTop: '8px' }}>
+                        <AlertCircle size={14} />
+                        <span>{docActionError}</span>
+                      </div>
+                    )}
+
+                    <div className="dl-actions-row">
+                      <button
+                        type="button"
+                        onClick={() => handleDocAction('accept')}
+                        disabled={docActionLoading || bookingDoc.status === 'accepted'}
+                        className="btn-doc-accept"
+                      >
+                        Accept Document
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const r = window.prompt('Enter rejection reason for customer:', 'Image is blurry or expired.')
+                          if (r !== null) {
+                            handleDocAction('reject', r)
+                          }
+                        }}
+                        disabled={docActionLoading || bookingDoc.status === 'rejected'}
+                        className="btn-doc-reject"
+                      >
+                        Reject Document
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Status Update Form */}
               <form onSubmit={handleUpdateStatus} className="status-update-form">
                 <div className="update-form-field">
@@ -350,6 +487,21 @@ export default function AdminBookingsPage() {
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* DL IMAGE PREVIEW LIGHTBOX */}
+      {previewImage && (
+        <div className="modal-backdrop" style={{ zIndex: 1200 }} onClick={() => setPreviewImage(null)}>
+          <div className="dl-lightbox-box" onClick={(e) => e.stopPropagation()}>
+            <div className="dl-lightbox-bar">
+              <span>Driving Licence Preview</span>
+              <button type="button" onClick={() => setPreviewImage(null)} className="btn-modal-close">
+                <X size={18} />
+              </button>
+            </div>
+            <img src={previewImage} alt="Driving Licence Preview" className="dl-lightbox-img" />
           </div>
         </div>
       )}

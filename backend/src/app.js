@@ -80,9 +80,9 @@ const corsOptions = createCorsOptions()
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 
-// Body parsing
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Body parsing (allow up to 10mb for demo image uploads)
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // API v1 root mount
 app.use(env.API_PREFIX, apiRouter)

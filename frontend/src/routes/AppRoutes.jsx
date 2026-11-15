@@ -24,6 +24,7 @@ const AdminBookingsPage = lazy(() => import('../pages/admin/AdminBookingsPage.js
 const AdminCustomersPage = lazy(() => import('../pages/admin/AdminCustomersPage.jsx'))
 const AdminPaymentsPage = lazy(() => import('../pages/admin/AdminPaymentsPage.jsx'))
 const AdminStaffPage = lazy(() => import('../pages/admin/AdminStaffPage.jsx'))
+const AdminDocumentsPage = lazy(() => import('../pages/admin/AdminDocumentsPage.jsx'))
 
 const RouteSuspenseFallback = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', color: '#64748b' }}>
@@ -81,6 +82,7 @@ export function AppRoutes() {
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="vehicles" element={<AdminVehiclesPage />} />
                 <Route path="bookings" element={<AdminBookingsPage />} />
+                <Route path="documents" element={<AdminDocumentsPage />} />
                 <Route path="customers" element={<AdminCustomersPage />} />
                 <Route path="payments" element={<AdminPaymentsPage />} />
                 <Route path="staff" element={<AdminStaffPage />} />

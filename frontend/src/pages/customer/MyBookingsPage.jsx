@@ -12,12 +12,14 @@ import {
   RefreshCw,
   RotateCcw,
   ShieldAlert,
+  ShieldCheck,
   X
 } from 'lucide-react'
 import api from '../../services/api.js'
 import { useAuth } from '../../context/useAuth.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx'
+import DrivingLicenceModal from '../../components/customer/DrivingLicenceModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -32,6 +34,7 @@ export default function MyBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [cancellingBooking, setCancellingBooking] = useState(null)
   const [receiptBooking, setReceiptBooking] = useState(null)
+  const [dlModalBooking, setDlModalBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
@@ -392,6 +395,16 @@ export default function MyBookingsPage() {
                         <span>Details</span>
                       </button>
 
+                      <button
+                        type="button"
+                        onClick={() => setDlModalBooking(booking)}
+                        className="btn btn-secondary btn-action btn-dl-card-btn"
+                        title="Upload or view Driving Licence verification"
+                      >
+                        <ShieldCheck size={15} />
+                        <span>Licence</span>
+                      </button>
+
                       {isEligibleForReceipt(booking) && (
                         <button
                           type="button"
@@ -617,6 +630,19 @@ export default function MyBookingsPage() {
                 )}
                 <button
                   type="button"
+                  onClick={() => {
+                    const b = selectedBooking
+                    setSelectedBooking(null)
+                    setDlModalBooking(b)
+                  }}
+                  className="btn btn-secondary btn-dl-modal-trigger"
+                  title="Upload or view Driving Licence verification"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Driving Licence</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setSelectedBooking(null)}
                   className="btn btn-secondary"
                 >
@@ -684,6 +710,14 @@ export default function MyBookingsPage() {
           onClose={() => setReceiptBooking(null)}
           bookingId={receiptBooking?.id}
           booking={receiptBooking}
+        />
+
+        {/* DRIVING LICENCE VERIFICATION MODAL (Phase 3 Demo) */}
+        <DrivingLicenceModal
+          isOpen={Boolean(dlModalBooking)}
+          onClose={() => setDlModalBooking(null)}
+          booking={dlModalBooking}
+          onStatusUpdated={() => fetchBookings()}
         />
       </div>
     </div>

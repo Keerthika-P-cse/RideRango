@@ -224,6 +224,18 @@ export const api = {
     })
   },
 
+  // Phase 3: Demo Driving Licence Document Upload & Verification
+  uploadDrivingLicence: async (docData) => {
+    return request('/documents/upload', {
+      method: 'POST',
+      body: docData
+    })
+  },
+
+  getDocumentStatus: async (bookingId) => {
+    return request(`/documents/status/${bookingId}`)
+  },
+
   // Payment endpoints (Razorpay)
   createPaymentOrder: async (bookingId) => {
     return request('/payments/create-order', {

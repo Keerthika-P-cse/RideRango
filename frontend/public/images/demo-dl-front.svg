@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380">
+  <defs>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Card Border & Background -->
+  <rect x="10" y="10" width="580" height="360" rx="16" fill="url(#cardBg)" stroke="#cbd5e1" stroke-width="3" />
+
+  <!-- Top Header Bar -->
+  <path d="M10 26 Q10 10 26 10 L574 10 Q590 10 590 26 L590 65 L10 65 Z" fill="url(#headerGrad)" />
+  <text x="300" y="35" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="1.5">UNION OF INDIA • DRIVING LICENCE</text>
+  <text x="300" y="52" text-anchor="middle" fill="#93c5fd" font-family="Arial, sans-serif" font-size="11" letter-spacing="1">KARNATAKA MOTOR VEHICLES DEPARTMENT (DEMO)</text>
+
+  <!-- Watermark across card -->
+  <g transform="rotate(-25 300 190)">
+    <text x="300" y="180" text-anchor="middle" fill="rgba(239, 68, 68, 0.18)" font-family="Arial, sans-serif" font-size="34" font-weight="900" letter-spacing="3">DEMO — NOT VALID</text>
+    <text x="300" y="215" text-anchor="middle" fill="rgba(239, 68, 68, 0.18)" font-family="Arial, sans-serif" font-size="18" font-weight="bold" letter-spacing="2">COLLEGE PROJECT DEMONSTRATION</text>
+  </g>
+
+  <!-- Chip Graphic -->
+  <rect x="40" y="90" width="55" height="45" rx="6" fill="#fbbf24" stroke="#d97706" stroke-width="1.5" />
+  <line x1="40" y1="112" x2="95" y2="112" stroke="#b45309" stroke-width="1" />
+  <line x1="67" y1="90" x2="67" y2="135" stroke="#b45309" stroke-width="1" />
+
+  <!-- Photo Box -->
+  <rect x="40" y="160" width="100" height="120" rx="8" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2" />
+  <circle cx="90" cy="205" r="24" fill="#64748b" />
+  <path d="M55 265 Q90 235 125 265 Z" fill="#64748b" />
+  <text x="90" y="275" text-anchor="middle" fill="#475569" font-family="Arial, sans-serif" font-size="9" font-weight="bold">SAMPLE PHOTO</text>
+
+  <!-- License Details Grid -->
+  <g font-family="Arial, sans-serif" fill="#1e293b">
+    <text x="165" y="100" font-size="11" fill="#64748b" font-weight="bold">LICENCE NO:</text>
+    <text x="260" y="100" font-size="14" font-weight="bold" fill="#0f172a" letter-spacing="1">KA-01-2026-0099881</text>
+
+    <text x="165" y="130" font-size="11" fill="#64748b" font-weight="bold">HOLDER NAME:</text>
+    <text x="260" y="130" font-size="13" font-weight="bold">DEMO CUSTOMER (ARJUN SHARMA)</text>
+
+    <text x="165" y="160" font-size="11" fill="#64748b" font-weight="bold">DATE OF BIRTH:</text>
+    <text x="260" y="160" font-size="12">15-08-1996</text>
+
+    <text x="165" y="190" font-size="11" fill="#64748b" font-weight="bold">VALIDITY:</text>
+    <text x="260" y="190" font-size="12">NON-TRANSPORT: 14-08-2036</text>
+
+    <text x="165" y="220" font-size="11" fill="#64748b" font-weight="bold">VEHICLE CLASS:</text>
+    <text x="260" y="220" font-size="12" font-weight="bold" fill="#2563eb">LMV (CAR) • MCWG (MOTORCYCLE)</text>
+
+    <text x="165" y="250" font-size="11" fill="#64748b" font-weight="bold">ISSUING AUTH:</text>
+    <text x="260" y="250" font-size="12">RTO INDIRANAGAR, BENGALURU</text>
+  </g>
+
+  <!-- Bottom Stamp & Banner -->
+  <rect x="10" y="325" width="580" height="45" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+  <text x="300" y="345" text-anchor="middle" fill="#dc2626" font-family="Arial, sans-serif" font-size="11" font-weight="bold">FRONT SIDE • FICTIONAL SAMPLE FOR COLLEGE PROJECT • NOT A REAL ID</text>
+  <text x="300" y="360" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="10">RideRango Demonstration Architecture — Strictly Educational</text>
+</svg>

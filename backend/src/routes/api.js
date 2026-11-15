@@ -5,6 +5,7 @@ import authRoutes from './authRoutes.js'
 import bookingRoutes from './bookingRoutes.js'
 import paymentRoutes from './paymentRoutes.js'
 import adminRoutes from './adminRoutes.js'
+import documentRoutes from './documentRoutes.js'
 
 const apiRouter = Router()
 
@@ -25,5 +26,8 @@ apiRouter.use('/', paymentRoutes)
 
 // Phase 7: Staff & Admin Management
 apiRouter.use('/admin', adminRoutes)
+
+// Documents (Demo Driving Licence Verification)
+apiRouter.use('/documents', documentRoutes)
 
 export default apiRouter
