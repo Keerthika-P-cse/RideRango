@@ -18,7 +18,15 @@ export function AdminAuthProvider({ children }) {
       return null
     }
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => {
+    try {
+      const storedToken = localStorage.getItem('riderango_admin_token')
+      const storedUser = localStorage.getItem('riderango_admin_user')
+      return !(storedToken && storedUser)
+    } catch {
+      return true
+    }
+  })
 
   useEffect(() => {
     let isMounted = true

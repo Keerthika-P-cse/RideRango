@@ -13,9 +13,54 @@ const getAdminToken = () => {
   }
 }
 
+// In-memory cache & in-flight deduplication for frequently read Admin GET requests
+const adminCache = new Map()
+const adminInFlightGets = new Map()
+const ADMIN_CACHE_TTL_MS = 20000 // 20 seconds TTL
+
+export function clearAdminCache(endpointPrefix) {
+  if (!endpointPrefix) {
+    adminCache.clear()
+    return
+  }
+  for (const key of adminCache.keys()) {
+    if (key.includes(endpointPrefix)) {
+      adminCache.delete(key)
+    }
+  }
+}
+
 async function adminRequest(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-  const primaryUrl = `${API_BASE_URL}${cleanEndpoint}`
+  let base = API_BASE_URL
+  if (typeof window !== 'undefined' && base.includes('localhost:5000') && (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')) {
+    base = base.replace('localhost:5000', '127.0.0.1:5000')
+  }
+  const primaryUrl = `${base}${cleanEndpoint}`
+  const method = (options.method || 'GET').toUpperCase()
+
+  // Invalidate cache on mutations
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    clearAdminCache()
+  }
+
+  // Deduplicate and cache GET requests for cache-eligible admin endpoints
+  const isCacheableGet = method === 'GET' && (
+    cleanEndpoint === '/admin/stats/dashboard' ||
+    cleanEndpoint === '/categories' ||
+    cleanEndpoint === '/brands' ||
+    cleanEndpoint === '/admin/vehicles'
+  )
+
+  if (isCacheableGet) {
+    const cached = adminCache.get(cleanEndpoint)
+    if (cached && Date.now() - cached.timestamp < ADMIN_CACHE_TTL_MS) {
+      return cached.data
+    }
+    if (adminInFlightGets.has(cleanEndpoint)) {
+      return adminInFlightGets.get(cleanEndpoint)
+    }
+  }
 
   const token = getAdminToken()
   const headers = {
@@ -33,34 +78,53 @@ async function adminRequest(endpoint, options = {}) {
     config.body = JSON.stringify(config.body)
   }
 
-  let response
-  try {
-    response = await fetch(primaryUrl, config)
-  } catch {
+  const executeRequest = async () => {
+    let response
     try {
-      if (primaryUrl.includes('localhost:5000')) {
-        const fallback127 = primaryUrl.replace('localhost:5000', '127.0.0.1:5000')
-        response = await fetch(fallback127, config)
-      } else {
-        const proxyUrl = `/api/v1${cleanEndpoint}`
-        response = await fetch(proxyUrl, config)
-      }
+      response = await fetch(primaryUrl, config)
     } catch {
-      throw new Error('Unable to connect to the RideRango server. Please check your internet connection or try again shortly.')
+      try {
+        if (primaryUrl.includes('localhost:5000')) {
+          const fallback127 = primaryUrl.replace('localhost:5000', '127.0.0.1:5000')
+          response = await fetch(fallback127, config)
+        } else {
+          const proxyUrl = `/api/v1${cleanEndpoint}`
+          response = await fetch(proxyUrl, config)
+        }
+      } catch {
+        throw new Error('Unable to connect to the RideRango server. Please check your internet connection or try again shortly.')
+      }
     }
+
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const errorMsg = data?.message || `Request failed with status ${response.status}`
+      const error = new Error(errorMsg)
+      error.status = response.status
+      error.data = data
+      throw error
+    }
+
+    if (isCacheableGet && data) {
+      adminCache.set(cleanEndpoint, {
+        timestamp: Date.now(),
+        data
+      })
+    }
+
+    return data
   }
 
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const errorMsg = data?.message || `Request failed with status ${response.status}`
-    const error = new Error(errorMsg)
-    error.status = response.status
-    error.data = data
-    throw error
+  if (isCacheableGet) {
+    const promise = executeRequest().finally(() => {
+      adminInFlightGets.delete(cleanEndpoint)
+    })
+    adminInFlightGets.set(cleanEndpoint, promise)
+    return promise
   }
 
-  return data
+  return executeRequest()
 }
 
 export const adminApi = {

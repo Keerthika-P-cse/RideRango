@@ -163,24 +163,24 @@ export default function VehicleReturnModal({
                 <div className="return-check-item">
                   <div className="check-bullet">1</div>
                   <div>
-                    <strong>Return Vehicle to Designated Hub</strong>
-                    <p>Park at {booking.dropoff_location || booking.pickup_location || 'the Hub'}.</p>
+                    <strong>Return Vehicle to Station</strong>
+                    <p>Park at {booking.dropoff_location || booking.pickup_location || 'the station'} on or before your return time.</p>
                   </div>
                 </div>
 
                 <div className="return-check-item">
                   <div className="check-bullet">2</div>
                   <div>
-                    <strong>Staff Odometer &amp; Fuel Inspection</strong>
-                    <p>Ending odometer reading will be verified to calculate distance travelled.</p>
+                    <strong>Fuel &amp; Odometer Inspection</strong>
+                    <p>Station staff will check the final mileage and fuel level to verify distance travelled.</p>
                   </div>
                 </div>
 
                 <div className="return-check-item">
                   <div className="check-bullet">3</div>
                   <div>
-                    <strong>Physical Condition Assessment</strong>
-                    <p>Fleet staff will inspect exterior, interior, and accessories before final closure.</p>
+                    <strong>Return Sign-Off</strong>
+                    <p>Complete a quick visual check with station staff to close your rental trip.</p>
                   </div>
                 </div>
               </div>

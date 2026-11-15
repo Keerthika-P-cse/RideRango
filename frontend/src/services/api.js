@@ -41,7 +41,11 @@ export function clearApiCache(endpointPrefix) {
 
 async function request(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-  const primaryUrl = `${API_BASE_URL}${cleanEndpoint}`
+  let base = API_BASE_URL
+  if (typeof window !== 'undefined' && base.includes('localhost:5000') && (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')) {
+    base = base.replace('localhost:5000', '127.0.0.1:5000')
+  }
+  const primaryUrl = `${base}${cleanEndpoint}`
   const method = (options.method || 'GET').toUpperCase()
 
   // Invalidate cache on mutations
@@ -52,15 +56,20 @@ async function request(endpoint, options = {}) {
     if (cleanEndpoint.includes('/bookings') || cleanEndpoint.includes('/payments')) {
       clearApiCache('/booked-dates')
     }
+    if (cleanEndpoint.includes('/auth/')) {
+      clearApiCache('/auth/me')
+    }
   }
 
   // Deduplicate and cache GET requests for cache-eligible endpoints
   const isCacheableGet = method === 'GET' && (
     cleanEndpoint === '/vehicles' ||
     cleanEndpoint.startsWith('/vehicles?') ||
+    (cleanEndpoint.startsWith('/vehicles/') && !cleanEndpoint.includes('/admin')) ||
     cleanEndpoint === '/categories' ||
     cleanEndpoint === '/brands' ||
-    cleanEndpoint.includes('/booked-dates')
+    cleanEndpoint.includes('/booked-dates') ||
+    cleanEndpoint === '/auth/me'
   )
 
   if (isCacheableGet) {

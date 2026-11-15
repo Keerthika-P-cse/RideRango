@@ -6,6 +6,7 @@ import {
   Car,
   CheckCircle2,
   Clock,
+  Compass,
   CreditCard,
   Eye,
   FileText,
@@ -225,8 +226,9 @@ export default function MyBookingsPage() {
               <RefreshCw size={15} />
               <span>Refresh</span>
             </button>
-            <Link to="/vehicles" className="btn btn-primary">
-              <span>Book Another Vehicle</span>
+            <Link to="/vehicles" className="btn btn-primary btn-explore-more" title="Explore available vehicles">
+              <Compass size={15} />
+              <span>Explore More Vehicles</span>
             </Link>
           </div>
         </div>
@@ -312,8 +314,9 @@ export default function MyBookingsPage() {
                 ? "You haven't made any bookings yet. Choose from our vehicles to start exploring."
                 : `You do not have any bookings with status "${statusFilter}".`}
             </p>
-            <Link to="/vehicles" className="btn btn-primary">
-              <span>Explore Vehicles</span>
+            <Link to="/vehicles" className="btn btn-primary btn-explore-more" title="Explore available vehicles">
+              <Compass size={16} />
+              <span>Explore More Vehicles</span>
             </Link>
           </div>
         ) : (
@@ -684,10 +687,10 @@ export default function MyBookingsPage() {
                     </div>
                     <p className="handover-overview-text">
                       {selectedBooking.booking_status === 'active'
-                        ? 'Vehicle was inspected and dispatched. Rental is currently active.'
+                        ? 'Vehicle was inspected and keys handed over. Your rental is currently active. Drive safely!'
                         : selectedBooking.booking_status === 'completed'
-                        ? 'Rental and vehicle handover completed successfully.'
-                        : 'Vehicle will be inspected and keys handed over at hub after agreement acceptance.'}
+                        ? 'Vehicle handover and return inspection completed successfully.'
+                        : 'Once you accept the rental agreement, visit our pickup station where staff will verify your licence, inspect the vehicle with you, and hand over the keys.'}
                     </p>
                     <button
                       type="button"
@@ -722,8 +725,8 @@ export default function MyBookingsPage() {
                     </div>
                     <p className="handover-overview-text">
                       {selectedBooking.booking_status === 'completed'
-                        ? 'Vehicle return inspection and distance travelled recorded.'
-                        : 'Return vehicle to hub at rental conclusion for staff odometer and condition inspection.'}
+                        ? 'Vehicle return inspection is complete. Distance travelled and fuel level have been recorded.'
+                        : 'Please return the vehicle to the pickup station at the end of your rental. Our staff will inspect the vehicle, verify fuel level and odometer, and complete check-in.'}
                     </p>
                     <button
                       type="button"

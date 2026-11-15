@@ -106,8 +106,8 @@ export const generateAgreement = async (req, res) => {
        JOIN customers c ON b.customer_id = c.id
        JOIN vehicles v ON b.vehicle_id = v.id
        LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
-       WHERE b.id = ?`,
-      [booking_id]
+       WHERE b.id = ? OR b.booking_reference = ?`,
+      [booking_id, booking_id]
     )
 
     if (bookingRows.length === 0) {
@@ -129,7 +129,7 @@ export const generateAgreement = async (req, res) => {
     // Check if an agreement already exists for this booking
     const [existingRows] = await pool.query(
       'SELECT * FROM rental_agreements WHERE booking_id = ?',
-      [booking_id]
+      [booking.id]
     )
 
     if (existingRows.length > 0) {

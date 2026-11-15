@@ -184,6 +184,12 @@
   overflow-y: auto;
   max-height: calc(94vh - 54px);
   position: relative;
+  outline: none;
+}
+
+.riderango-receipt-card:focus,
+.riderango-receipt-card:focus-visible {
+  outline: none;
 }
 
 /* DEMO Notice Banner */
@@ -778,6 +784,11 @@
     min-height: 0 !important;
     overflow: visible !important;
     z-index: auto !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    filter: none !important;
   }
 
   .receipt-modal-container {
@@ -790,13 +801,21 @@
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
+    outline: none !important;
     box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    filter: none !important;
     background: transparent !important;
     overflow: visible !important;
   }
 
-  /* Format receipt document to fill printable area cleanly */
-  .payment-receipt-print-area {
+  /* Format receipt document to fill printable area cleanly - eliminate any black border, outline or dark shadow */
+  .riderango-receipt-card,
+  .payment-receipt-print-area,
+  .riderango-receipt-card:focus,
+  .riderango-receipt-card:focus-visible,
+  .payment-receipt-print-area:focus,
+  .payment-receipt-print-area:focus-visible {
     position: static !important;
     display: block !important;
     visibility: visible !important;
@@ -808,7 +827,10 @@
     color: #0f172a !important;
     border: none !important;
     border-radius: 0 !important;
+    outline: none !important;
     box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    filter: none !important;
     overflow: visible !important;
     max-height: none !important;
   }

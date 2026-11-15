@@ -18,7 +18,15 @@ export function AuthProvider({ children }) {
       return null
     }
   })
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const storedToken = localStorage.getItem('riderango_token')
+      const storedUser = localStorage.getItem('riderango_user')
+      return !(storedToken && storedUser)
+    } catch {
+      return true
+    }
+  })
 
   // Verify stored session on initial mount
   useEffect(() => {

@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   FileText,
+  FileSignature,
   CheckCircle2,
   AlertCircle,
   Clock,
   Printer,
+  RefreshCw,
   X,
   ShieldCheck,
   Info
@@ -22,48 +24,63 @@ export default function RentalAgreementModal({
 }) {
   const [agreement, setAgreement] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [accepting, setAccepting] = useState(false)
   const [confirmedCheck, setConfirmedCheck] = useState(false)
   const [actionSuccessMsg, setActionSuccessMsg] = useState('')
 
-  useEffect(() => {
-    if (!isOpen || !booking?.id) return
-
-    let isMounted = true
+  const loadAgreement = useCallback(async () => {
+    if (!booking?.id) return
     setLoading(true)
     setErrorMsg('')
+    try {
+      const fetchPromise = isAdminView
+        ? adminApi.getAdminAgreement(booking.id)
+        : api.getRentalAgreement(booking.id)
+
+      const res = await fetchPromise
+      if (res && res.success && res.data) {
+        setAgreement(res.data)
+      } else {
+        setAgreement(null)
+      }
+    } catch (err) {
+      console.warn('Failed to load agreement:', err)
+      setErrorMsg(err.message || 'Failed to retrieve agreement details.')
+    } finally {
+      setLoading(false)
+    }
+  }, [booking?.id, isAdminView])
+
+  useEffect(() => {
+    if (!isOpen || !booking?.id) return
     setActionSuccessMsg('')
     setConfirmedCheck(false)
-
-    const fetchAgreement = isAdminView
-      ? adminApi.getAdminAgreement(booking.id)
-      : api.getRentalAgreement(booking.id)
-
-    fetchAgreement
-      .then((res) => {
-        if (!isMounted) return
-        if (res && res.success && res.data) {
-          setAgreement(res.data)
-        } else {
-          setAgreement(null)
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return
-        console.warn('Failed to load agreement:', err)
-        setErrorMsg(err.message || 'Failed to retrieve agreement details.')
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false)
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [isOpen, booking?.id, isAdminView])
+    loadAgreement()
+  }, [isOpen, booking?.id, loadAgreement])
 
   if (!isOpen || !booking) return null
+
+  const handleAdminGenerate = async () => {
+    if (!booking?.id) return
+    setGenerating(true)
+    setErrorMsg('')
+    try {
+      const res = await adminApi.generateAgreement(booking.id)
+      if (res && res.success && res.data) {
+        setAgreement(res.data)
+        setActionSuccessMsg('Rental agreement generated successfully. Awaiting customer acceptance.')
+        if (onStatusUpdated) onStatusUpdated('generated')
+      } else {
+        setErrorMsg(res?.message || 'Failed to generate agreement.')
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to generate rental agreement.')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const handleAcceptAgreement = async (e) => {
     e.preventDefault()
@@ -135,6 +152,16 @@ export default function RentalAgreementModal({
             )}
             <button
               type="button"
+              onClick={loadAgreement}
+              disabled={loading}
+              className="agr-btn-refresh-icon"
+              title="Refresh agreement status"
+              aria-label="Refresh agreement status"
+            >
+              <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+            </button>
+            <button
+              type="button"
               onClick={onClose}
               className="agr-btn-close"
               aria-label="Close agreement modal"
@@ -161,23 +188,71 @@ export default function RentalAgreementModal({
             <div className="agr-state-box">
               <AlertCircle size={32} color="#ef4444" />
               <p className="agr-error-text">{errorMsg}</p>
+              <button
+                type="button"
+                onClick={loadAgreement}
+                className="agr-btn-refresh"
+                style={{ marginTop: '12px' }}
+              >
+                <RefreshCw size={15} />
+                <span>Try Again</span>
+              </button>
             </div>
           ) : isNotGenerated ? (
             <div className="agr-state-box">
               <FileText size={42} color="#64748b" />
-              <h4>Agreement Not Generated Yet</h4>
+              <h4>{isAdminView ? 'Agreement Ready for Generation' : 'Your Rental Agreement Is Being Prepared'}</h4>
               <p>
-                A rental agreement has not yet been generated for reservation{' '}
-                <strong>{booking.booking_reference}</strong>.
+                {isAdminView
+                  ? `Rental agreement has not yet been generated for reservation ${booking.booking_reference}. Click below to generate it now.`
+                  : `Our station staff is currently preparing the rental agreement for reservation ${booking.booking_reference}.`}
               </p>
+
               {isAdminView ? (
-                <p className="agr-hint-text">
-                  You can generate the agreement using the <strong>Generate Agreement</strong> action in the booking details modal.
-                </p>
+                <div className="agr-admin-gen-box">
+                  <button
+                    type="button"
+                    onClick={handleAdminGenerate}
+                    disabled={generating}
+                    className="agr-btn-generate-direct"
+                  >
+                    <FileSignature size={16} />
+                    <span>{generating ? 'Generating Agreement...' : 'Generate Agreement Now'}</span>
+                  </button>
+                  <p className="agr-hint-text">
+                    Generating creates the digital agreement immediately for customer review and acceptance.
+                  </p>
+                </div>
               ) : (
-                <p className="agr-hint-text">
-                  Our fleet staff generates the sample rental agreement once your booking is confirmed. Please check back shortly before vehicle handover.
-                </p>
+                <div className="agr-customer-waiting-box">
+                  <div className="agr-steps-mini">
+                    <div className="step-mini-item">
+                      <span className="step-num">1</span>
+                      <span>Staff generates agreement for this booking.</span>
+                    </div>
+                    <div className="step-mini-item">
+                      <span className="step-num">2</span>
+                      <span>You review the terms and accept online.</span>
+                    </div>
+                    <div className="step-mini-item">
+                      <span className="step-num">3</span>
+                      <span>Visit the pickup station with your Driving Licence to collect keys.</span>
+                    </div>
+                  </div>
+
+                  <div className="agr-waiting-actions">
+                    <button
+                      type="button"
+                      onClick={loadAgreement}
+                      disabled={loading}
+                      className="agr-btn-refresh"
+                      title="Check if the agreement is ready"
+                    >
+                      <RefreshCw size={15} className={loading ? 'spinning' : ''} />
+                      <span>{loading ? 'Checking...' : 'Check Again / Refresh'}</span>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           ) : (

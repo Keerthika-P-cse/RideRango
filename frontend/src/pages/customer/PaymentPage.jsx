@@ -6,13 +6,15 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Compass,
   CreditCard,
   FileText,
   Lock,
   MapPin,
   Shield,
   Smartphone,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react'
 import api from '../../services/api.js'
 import { useAuth } from '../../context/useAuth.js'
@@ -30,6 +32,7 @@ export default function PaymentPage() {
   const [processingPayment, setProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentResult, setPaymentResult] = useState(null)
+  const [showSuccessBanner, setShowSuccessBanner] = useState(true)
   const [selectedMethod, setSelectedMethod] = useState('upi')
   const [showTestModal, setShowTestModal] = useState(false)
   const [testOrderData, setTestOrderData] = useState(null)
@@ -298,116 +301,67 @@ export default function PaymentPage() {
     )
   }
 
-  // SUCCESS STATE
-  if (paymentSuccess) {
-    return (
-      <div className="payment-page-wrapper">
-        <div className="payment-container success-container">
-          <div className="payment-success-card">
-            <div className="success-icon-box">
-              <CheckCircle2 size={48} className="success-icon" />
-            </div>
+  const isConfirmed = paymentSuccess || booking.booking_status === 'confirmed'
 
-            <span className="success-badge">
-              {paymentResult?.isDemo
-                ? 'DEMO PAYMENT Verified & Confirmed (Simulated)'
-                : 'Payment Verified & Confirmed'}
-            </span>
-            <h1 className="success-title">
-              {paymentResult?.isDemo ? 'Booking Confirmed (DEMO)!' : 'Booking Confirmed!'}
-            </h1>
-            <p className="success-desc">
-              {paymentResult?.isDemo
-                ? 'DEMO PAYMENT (Simulated – No real money transferred). Your vehicle booking has been confirmed for demonstration.'
-                : 'Your vehicle booking has been confirmed and paid through Razorpay.'}
-            </p>
-
-            <div className="success-reference-box">
-              <div className="ref-item">
-                <span className="ref-label">Booking Reference:</span>
-                <strong className="ref-val">{paymentResult?.bookingReference || booking.booking_reference}</strong>
-              </div>
-              <div className="ref-item">
-                <span className="ref-label">Payment ID:</span>
-                <span className="ref-val mono">{paymentResult?.paymentId || 'TXN-CONFIRMED'}</span>
-              </div>
-              <div className="ref-item">
-                <span className="ref-label">Amount Paid:</span>
-                <strong className="ref-val">₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}</strong>
-              </div>
-            </div>
-
-            <div className="success-itinerary-box">
-              <h4>Trip Details</h4>
-              <div className="itin-grid">
-                <div>
-                  <span>Vehicle:</span>
-                  <strong>{booking.make} {booking.model}</strong>
-                </div>
-                <div>
-                  <span>Pickup Location:</span>
-                  <strong>{booking.pickup_location}</strong>
-                </div>
-                <div>
-                  <span>Pickup Date:</span>
-                  <strong>{new Date(booking.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(booking.start_date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})</strong>
-                </div>
-                <div>
-                  <span>Return Date:</span>
-                  <strong>{new Date(booking.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(booking.end_date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})</strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="success-actions-row">
-              <button
-                type="button"
-                onClick={() => setShowReceiptModal(true)}
-                className="btn btn-receipt-view-action"
-                title="View and print official payment receipt"
-              >
-                <FileText size={16} />
-                <span>View Payment Receipt</span>
-              </button>
-              <Link to="/my-bookings" className="btn btn-primary">
-                <span>View in My Bookings</span>
-              </Link>
-              <Link to="/vehicles" className="btn btn-secondary">
-                <span>Explore More Vehicles</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <PaymentReceiptModal
-          isOpen={showReceiptModal}
-          onClose={() => setShowReceiptModal(false)}
-          bookingId={booking?.id}
-          booking={booking}
-        />
-      </div>
-    )
-  }
-
-  // CHECKOUT PAYMENT FORM
   return (
     <div className="payment-page-wrapper">
       <div className="payment-container">
         {/* Navigation */}
         <div className="payment-top-nav">
-          <Link to={`/booking?vehicleId=${booking.vehicle_id}`} className="btn-back-link">
-            <ArrowLeft size={16} />
-            <span>Change Booking</span>
-          </Link>
-          <span className="step-tag">Step 2 of 2: Secure Payment</span>
+          {isConfirmed ? (
+            <Link to="/my-bookings" className="btn-back-link">
+              <ArrowLeft size={16} />
+              <span>Back to My Bookings</span>
+            </Link>
+          ) : (
+            <Link to={`/booking?vehicleId=${booking.vehicle_id}`} className="btn-back-link">
+              <ArrowLeft size={16} />
+              <span>Change Booking</span>
+            </Link>
+          )}
+          <span className="step-tag">
+            {isConfirmed ? 'Payment Confirmed' : 'Step 2 of 2: Secure Payment'}
+          </span>
         </div>
 
         <div className="payment-header">
-          <h1 className="payment-title">Secure Payment Checkout</h1>
+          <h1 className="payment-title">
+            {isConfirmed ? 'Booking Confirmation' : 'Secure Payment Checkout'}
+          </h1>
           <p className="payment-subtitle">
-            Powered by Razorpay &bull; Secure encrypted payment
+            {isConfirmed
+              ? 'Your reservation is confirmed for academic demonstration.'
+              : 'Powered by Razorpay • Secure encrypted payment'}
           </p>
         </div>
+
+        {/* Compact Success Message Banner (Requirement 1: compact, within container, non-overlapping, dismissible) */}
+        {isConfirmed && showSuccessBanner && (
+          <div className="payment-alert alert-success compact-confirmation-banner" role="status">
+            <div className="alert-content-row">
+              <CheckCircle2 size={20} className="alert-icon" />
+              <div className="alert-text">
+                <strong>Booking Confirmed – Demo</strong>
+                <p>
+                  Your reservation is confirmed for demonstration (Ref:{' '}
+                  <code>{paymentResult?.bookingReference || booking.booking_reference}</code>).
+                  {paymentResult?.isDemo || String(booking.gateway_transaction_id || '').startsWith('DEMO-')
+                    ? ' Simulated demo payment — no real money transferred.'
+                    : ' Payment verified and recorded.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSuccessBanner(false)}
+              className="btn-dismiss-alert"
+              title="Close confirmation"
+              aria-label="Close confirmation message"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         {/* Error Banner */}
         {error && (
@@ -421,99 +375,151 @@ export default function PaymentPage() {
         )}
 
         <div className="payment-grid">
-          {/* LEFT COLUMN: Payment Method & Pay Action */}
+          {/* LEFT COLUMN: Payment Method OR Confirmed Reservation Details */}
           <div className="payment-methods-column">
-            <div className="payment-card">
-              <div className="card-header">
-                <CreditCard size={18} className="header-icon" />
-                <h3>Select Payment Method</h3>
-              </div>
-
-              <div className="card-body">
-                {/* Method Options */}
-                <div className="method-selector-list">
-                  <label className={`method-card ${selectedMethod === 'upi' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="upi"
-                      checked={selectedMethod === 'upi'}
-                      onChange={() => setSelectedMethod('upi')}
-                    />
-                    <div className="method-info">
-                      <Smartphone size={20} className="method-icon" />
-                      <div className="method-text">
-                        <strong>UPI Instant Payment</strong>
-                        <span>Google Pay, PhonePe, Paytm, BHIM UPI</span>
-                      </div>
-                    </div>
-                    <span className="method-pill recommended">Recommended</span>
-                  </label>
-
-                  <label className={`method-card ${selectedMethod === 'credit_card' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="credit_card"
-                      checked={selectedMethod === 'credit_card'}
-                      onChange={() => setSelectedMethod('credit_card')}
-                    />
-                    <div className="method-info">
-                      <CreditCard size={20} className="method-icon" />
-                      <div className="method-text">
-                        <strong>Credit / Debit Card</strong>
-                        <span>Visa, MasterCard, RuPay, Maestro</span>
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`method-card ${selectedMethod === 'net_banking' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="net_banking"
-                      checked={selectedMethod === 'net_banking'}
-                      onChange={() => setSelectedMethod('net_banking')}
-                    />
-                    <div className="method-info">
-                      <Wallet size={20} className="method-icon" />
-                      <div className="method-text">
-                        <strong>Net Banking</strong>
-                        <span>SBI, HDFC, ICICI, Axis, and 50+ Banks</span>
-                      </div>
-                    </div>
-                  </label>
+            {isConfirmed ? (
+              <div className="payment-card payment-confirmed-card">
+                <div className="card-header">
+                  <CheckCircle2 size={18} className="header-icon text-success" />
+                  <h3>Reservation &amp; Payment Status</h3>
                 </div>
 
-                <div className="security-badges-row">
-                  <div className="sec-item">
-                    <Shield size={16} className="sec-icon" />
-                    <span>Razorpay PCI-DSS Compliant</span>
+                <div className="card-body">
+                  <div className="confirmed-status-badge">
+                    {paymentResult?.isDemo || String(booking.gateway_transaction_id || '').startsWith('DEMO-')
+                      ? 'DEMO PAYMENT Verified & Confirmed (Simulated)'
+                      : 'Payment Verified & Confirmed'}
                   </div>
-                  <div className="sec-item">
-                    <Lock size={16} className="sec-icon" />
-                    <span>No card details stored on server</span>
+
+                  <div className="success-reference-box">
+                    <div className="ref-item">
+                      <span className="ref-label">Booking Reference:</span>
+                      <strong className="ref-val">{paymentResult?.bookingReference || booking.booking_reference}</strong>
+                    </div>
+                    <div className="ref-item">
+                      <span className="ref-label">Transaction Reference:</span>
+                      <span className="ref-val mono">{paymentResult?.paymentId || booking.gateway_transaction_id || booking.transaction_reference || 'DEMO-CONFIRMED'}</span>
+                    </div>
+                    <div className="ref-item">
+                      <span className="ref-label">Amount Paid:</span>
+                      <strong className="ref-val">₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+
+                  <div className="success-actions-row">
+                    <button
+                      type="button"
+                      onClick={() => setShowReceiptModal(true)}
+                      className="btn btn-receipt-view-action"
+                      title="View and print official payment receipt"
+                    >
+                      <FileText size={16} />
+                      <span>View Payment Receipt</span>
+                    </button>
+                    <Link to="/my-bookings" className="btn btn-primary">
+                      <Calendar size={16} />
+                      <span>View in My Bookings</span>
+                    </Link>
+                    <Link to="/vehicles" className="btn btn-secondary">
+                      <Compass size={16} />
+                      <span>Explore More Vehicles</span>
+                    </Link>
                   </div>
                 </div>
-
-                {/* Main Pay Now Action */}
-                <button
-                  type="button"
-                  onClick={handleInitiatePayment}
-                  disabled={processingPayment}
-                  className="btn btn-primary btn-pay-now"
-                >
-                  {processingPayment ? (
-                    <span>Processing Secure Payment...</span>
-                  ) : (
-                    <>
-                      <Lock size={18} />
-                      <span>Pay ₹{parseFloat(booking.total_amount).toLocaleString('en-IN')} Now</span>
-                    </>
-                  )}
-                </button>
               </div>
-            </div>
+            ) : (
+              <div className="payment-card">
+                <div className="card-header">
+                  <CreditCard size={18} className="header-icon" />
+                  <h3>Select Payment Method</h3>
+                </div>
+
+                <div className="card-body">
+                  {/* Method Options */}
+                  <div className="method-selector-list">
+                    <label className={`method-card ${selectedMethod === 'upi' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="upi"
+                        checked={selectedMethod === 'upi'}
+                        onChange={() => setSelectedMethod('upi')}
+                      />
+                      <div className="method-info">
+                        <Smartphone size={20} className="method-icon" />
+                        <div className="method-text">
+                          <strong>UPI Instant Payment</strong>
+                          <span>Google Pay, PhonePe, Paytm, BHIM UPI</span>
+                        </div>
+                      </div>
+                      <span className="method-pill recommended">Recommended</span>
+                    </label>
+
+                    <label className={`method-card ${selectedMethod === 'credit_card' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="credit_card"
+                        checked={selectedMethod === 'credit_card'}
+                        onChange={() => setSelectedMethod('credit_card')}
+                      />
+                      <div className="method-info">
+                        <CreditCard size={20} className="method-icon" />
+                        <div className="method-text">
+                          <strong>Credit / Debit Card</strong>
+                          <span>Visa, MasterCard, RuPay, Maestro</span>
+                        </div>
+                      </div>
+                    </label>
+
+                    <label className={`method-card ${selectedMethod === 'net_banking' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="net_banking"
+                        checked={selectedMethod === 'net_banking'}
+                        onChange={() => setSelectedMethod('net_banking')}
+                      />
+                      <div className="method-info">
+                        <Wallet size={20} className="method-icon" />
+                        <div className="method-text">
+                          <strong>Net Banking</strong>
+                          <span>SBI, HDFC, ICICI, Axis, and 50+ Banks</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="security-badges-row">
+                    <div className="sec-item">
+                      <Shield size={16} className="sec-icon" />
+                      <span>Razorpay PCI-DSS Compliant</span>
+                    </div>
+                    <div className="sec-item">
+                      <Lock size={16} className="sec-icon" />
+                      <span>No card details stored on server</span>
+                    </div>
+                  </div>
+
+                  {/* Main Pay Now Action */}
+                  <button
+                    type="button"
+                    onClick={handleInitiatePayment}
+                    disabled={processingPayment}
+                    className="btn btn-primary btn-pay-now"
+                  >
+                    {processingPayment ? (
+                      <span>Processing Secure Payment...</span>
+                    ) : (
+                      <>
+                        <Lock size={18} />
+                        <span>Pay ₹{parseFloat(booking.total_amount).toLocaleString('en-IN')} Now</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN: Booking Summary Breakdown */}
@@ -635,6 +641,13 @@ export default function PaymentPage() {
             </div>
           </div>
         )}
+
+        <PaymentReceiptModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          bookingId={booking?.id}
+          booking={booking}
+        />
       </div>
     </div>
   )

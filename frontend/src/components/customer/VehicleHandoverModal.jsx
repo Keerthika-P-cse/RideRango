@@ -135,11 +135,11 @@ export default function VehicleHandoverModal({
                 <div className="checklist-item">
                   <div className="checklist-bullet">1</div>
                   <div>
-                    <strong>Rental Agreement Acceptance</strong>
+                    <strong>Accept Rental Agreement</strong>
                     <p>
                       {handoverData?.agreement?.status === 'accepted'
-                        ? 'Completed: Agreement accepted by customer.'
-                        : 'Pending: Customer must accept agreement prior to vehicle release.'}
+                        ? 'Completed: Rental agreement accepted online.'
+                        : 'Next Step: Review and accept your rental agreement before arriving at the hub.'}
                     </p>
                   </div>
                 </div>
@@ -147,16 +147,16 @@ export default function VehicleHandoverModal({
                 <div className="checklist-item">
                   <div className="checklist-bullet">2</div>
                   <div>
-                    <strong>In-Person Identity Verification</strong>
-                    <p>Present original Driving Licence and Aadhaar card at the hub.</p>
+                    <strong>Driving Licence Verification</strong>
+                    <p>Bring your original physical Driving Licence and ID proof to the station for verification.</p>
                   </div>
                 </div>
 
                 <div className="checklist-item">
                   <div className="checklist-bullet">3</div>
                   <div>
-                    <strong>Joint Vehicle Inspection &amp; Key Handover</strong>
-                    <p>Fleet staff will record starting odometer, fuel level, and release the keys.</p>
+                    <strong>Vehicle Check &amp; Key Handover</strong>
+                    <p>Station staff will verify starting odometer reading and fuel level with you, and hand over the keys.</p>
                   </div>
                 </div>
               </div>

@@ -52,6 +52,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-explore-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .btn-refresh {
@@ -312,15 +322,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .btn-action {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   font-size: 0.82rem;
   height: 36px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .btn-receipt-card-btn {
@@ -764,7 +780,9 @@
 
   .item-actions {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .modal-section-grid {

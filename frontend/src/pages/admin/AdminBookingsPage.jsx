@@ -180,6 +180,8 @@ export default function AdminBookingsPage() {
       if (res && res.success && res.data) {
         setBookingAgreement(res.data)
         setSuccessMsg(`Rental agreement generated for ${selectedBooking.booking_reference}. Awaiting customer acceptance.`)
+        await loadBookings()
+        setViewingAgreementModal(true)
       } else {
         setAgreementActionError(res.message || 'Failed to generate agreement.')
       }
@@ -536,15 +538,32 @@ export default function AdminBookingsPage() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetailModal(b)}
-                        className="btn-tbl-action"
-                        title="View / Update Booking"
-                      >
-                        <Eye size={14} />
-                        <span>Inspect</span>
-                      </button>
+                      <div className="tbl-actions-cell" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetailModal(b)}
+                          className="btn-tbl-action"
+                          title="View / Update Booking"
+                        >
+                          <Eye size={14} />
+                          <span>Inspect</span>
+                        </button>
+                        {['confirmed', 'active', 'completed'].includes(b.booking_status) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleOpenDetailModal(b)
+                              setViewingAgreementModal(true)
+                            }}
+                            className="btn-tbl-action btn-tbl-agreement"
+                            title="View or generate agreement"
+                            style={{ background: 'rgba(229, 35, 46, 0.12)', color: '#f87171', border: '1px solid rgba(229, 35, 46, 0.25)' }}
+                          >
+                            <FileSignature size={14} />
+                            <span>Agreement</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1566,6 +1585,10 @@ export default function AdminBookingsPage() {
           isOpen={viewingAgreementModal}
           booking={selectedBooking}
           onClose={() => setViewingAgreementModal(false)}
+          onStatusUpdated={() => {
+            loadBookingAgreement(selectedBooking)
+            loadBookings()
+          }}
           isAdminView={true}
         />
       )}
