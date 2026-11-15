@@ -131,6 +131,16 @@ export const adminApi = {
   getAdminReturnsList: () =>
     adminRequest('/returns/admin/list'),
 
+  // Phase 7: Final Settlement & Rental Closure
+  previewSettlement: (bookingId) =>
+    adminRequest(`/settlements/booking/${bookingId}/preview`),
+  confirmSettlement: (payload) =>
+    adminRequest('/settlements/confirm', { method: 'POST', body: payload }),
+  getAdminSettlement: (bookingId) =>
+    adminRequest(`/settlements/booking/${bookingId}`),
+  getAdminSettlementsList: () =>
+    adminRequest('/settlements/admin/list'),
+
   // Customers
   getCustomers: () => adminRequest('/admin/customers'),
   getCustomerHistory: (id) => adminRequest(`/admin/customers/${id}/bookings`),

@@ -286,6 +286,11 @@ export const api = {
     return request(`/returns/booking/${bookingId}`)
   },
 
+  // Phase 7: Final Settlement & Rental Closure
+  getSettlementDetails: async (bookingId) => {
+    return request(`/settlements/booking/${bookingId}`)
+  },
+
   getBaseUrl: () => API_BASE_URL
 }
 

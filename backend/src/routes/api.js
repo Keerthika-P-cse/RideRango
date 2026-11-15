@@ -9,6 +9,7 @@ import documentRoutes from './documentRoutes.js'
 import agreementRoutes from './agreementRoutes.js'
 import handoverRoutes from './handoverRoutes.js'
 import returnRoutes from './returnRoutes.js'
+import settlementRoutes from './settlementRoutes.js'
 
 const apiRouter = Router()
 
@@ -41,5 +42,8 @@ apiRouter.use('/handovers', handoverRoutes)
 
 // Phase 6: Returns (Demo Vehicle Return & Inspection Workflow)
 apiRouter.use('/returns', returnRoutes)
+
+// Phase 7: Settlements (Demo Final Settlement & Rental Closure)
+apiRouter.use('/settlements', settlementRoutes)
 
 export default apiRouter

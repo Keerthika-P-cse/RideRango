@@ -10,6 +10,7 @@ import {
   Eye,
   FileText,
   FileSignature,
+  FileCheck2,
   MapPin,
   RefreshCw,
   RotateCcw,
@@ -25,6 +26,7 @@ import DrivingLicenceModal from '../../components/customer/DrivingLicenceModal.j
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
 import VehicleReturnModal from '../../components/customer/VehicleReturnModal.jsx'
+import SettlementSummaryModal from '../../components/customer/SettlementSummaryModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -43,6 +45,7 @@ export default function MyBookingsPage() {
   const [agreementBooking, setAgreementBooking] = useState(null)
   const [handoverBooking, setHandoverBooking] = useState(null)
   const [returnModalBooking, setReturnModalBooking] = useState(null)
+  const [settlementModalBooking, setSettlementModalBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
@@ -461,6 +464,18 @@ export default function MyBookingsPage() {
                         </button>
                       )}
 
+                      {booking.booking_status === 'completed' && (
+                        <button
+                          type="button"
+                          onClick={() => setSettlementModalBooking(booking)}
+                          className="btn btn-secondary btn-action btn-settlement-card-btn"
+                          title="View final rental settlement & deposit refund statement"
+                        >
+                          <FileCheck2 size={14} />
+                          <span>Final Settlement</span>
+                        </button>
+                      )}
+
                       {isPending && (
                         <Link
                           to={`/payment/${booking.id}`}
@@ -724,6 +739,34 @@ export default function MyBookingsPage() {
                     </button>
                   </div>
                 )}
+
+                {/* Final Settlement Overview Card (Phase 7 Demo) */}
+                {selectedBooking.booking_status === 'completed' && (
+                  <div className="handover-overview-card return-overview-card settlement-overview-card">
+                    <div className="handover-overview-header">
+                      <div className="handover-overview-title">
+                        <FileCheck2 size={16} className="text-emerald" />
+                        <strong>Final Settlement Statement</strong>
+                      </div>
+                      <span className="handover-badge-done">Completed &amp; Settled</span>
+                    </div>
+                    <p className="handover-overview-text">
+                      Rental closed and settled. View reconciled itemized charges and security deposit refund.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const b = selectedBooking
+                        setSelectedBooking(null)
+                        setSettlementModalBooking(b)
+                      }}
+                      className="btn-handover-inline-view btn-settlement-inline-view"
+                    >
+                      <FileCheck2 size={14} />
+                      <span>View Settlement Statement</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">
@@ -804,6 +847,21 @@ export default function MyBookingsPage() {
                   >
                     <RotateCcw size={16} />
                     <span>Vehicle Return</span>
+                  </button>
+                )}
+                {selectedBooking.booking_status === 'completed' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const b = selectedBooking
+                      setSelectedBooking(null)
+                      setSettlementModalBooking(b)
+                    }}
+                    className="btn btn-secondary btn-settlement-modal-trigger"
+                    title="View final rental settlement & deposit refund statement"
+                  >
+                    <FileCheck2 size={16} />
+                    <span>Final Settlement</span>
                   </button>
                 )}
                 <button
@@ -905,6 +963,13 @@ export default function MyBookingsPage() {
           isOpen={Boolean(returnModalBooking)}
           onClose={() => setReturnModalBooking(null)}
           booking={returnModalBooking}
+        />
+
+        {/* FINAL SETTLEMENT MODAL (Phase 7 Demo) */}
+        <SettlementSummaryModal
+          isOpen={Boolean(settlementModalBooking)}
+          onClose={() => setSettlementModalBooking(null)}
+          booking={settlementModalBooking}
         />
       </div>
     </div>

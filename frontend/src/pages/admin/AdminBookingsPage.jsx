@@ -14,13 +14,16 @@ import {
   Fuel,
   UserCheck,
   CheckSquare,
-  RotateCcw
+  RotateCcw,
+  Coins,
+  Receipt
 } from 'lucide-react'
 import adminApi from '../../services/adminApi.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
 import VehicleReturnModal from '../../components/customer/VehicleReturnModal.jsx'
+import SettlementSummaryModal from '../../components/customer/SettlementSummaryModal.jsx'
 import './AdminBookingsPage.css'
 
 export default function AdminBookingsPage() {
@@ -75,6 +78,15 @@ export default function AdminBookingsPage() {
   const [returnSubmitting, setReturnSubmitting] = useState(false)
   const [returnError, setReturnError] = useState('')
   const [viewingReturnModal, setViewingReturnModal] = useState(false)
+
+  // Final Settlement in Booking Modal (Phase 7 Demo)
+  const [bookingSettlement, setBookingSettlement] = useState(null)
+  const [loadingSettlement, setLoadingSettlement] = useState(false)
+  const [settlementNotes, setSettlementNotes] = useState('')
+  const [settlementSubmitting, setSettlementSubmitting] = useState(false)
+  const [settlementError, setSettlementError] = useState('')
+  const [viewingSettlementModal, setViewingSettlementModal] = useState(false)
+  const [showConfirmSettlementDialog, setShowConfirmSettlementDialog] = useState(false)
 
   const loadBookings = useCallback(async () => {
     setLoading(true)
@@ -291,6 +303,7 @@ export default function AdminBookingsPage() {
         )
         setShowReturnForm(false)
         await loadBookingReturn(selectedBooking)
+        await loadBookingSettlement(selectedBooking)
         await loadBookings()
       } else {
         setReturnError(res.message || 'Failed to record vehicle return inspection.')
@@ -299,6 +312,55 @@ export default function AdminBookingsPage() {
       setReturnError(err.message || 'Failed to record vehicle return inspection.')
     } finally {
       setReturnSubmitting(false)
+    }
+  }
+
+  const loadBookingSettlement = async (b) => {
+    setLoadingSettlement(true)
+    setSettlementError('')
+    try {
+      const res = await adminApi.previewSettlement(b.id)
+      if (res && res.success && res.data) {
+        setBookingSettlement(res.data)
+      } else {
+        setBookingSettlement(null)
+      }
+    } catch {
+      setBookingSettlement(null)
+    } finally {
+      setLoadingSettlement(false)
+    }
+  }
+
+  const handleConfirmSettlement = async () => {
+    if (!selectedBooking) return
+    setSettlementSubmitting(true)
+    setSettlementError('')
+
+    try {
+      const res = await adminApi.confirmSettlement({
+        booking_id: selectedBooking.id,
+        settlement_notes: settlementNotes
+      })
+
+      if (res && res.success) {
+        setSuccessMsg(
+          `Final settlement confirmed for ${selectedBooking.booking_reference}. Booking is COMPLETED and vehicle is AVAILABLE.`
+        )
+        setShowConfirmSettlementDialog(false)
+        setSelectedBooking((prev) => ({
+          ...prev,
+          booking_status: 'completed'
+        }))
+        await loadBookingSettlement(selectedBooking)
+        await loadBookings()
+      } else {
+        setSettlementError(res?.message || 'Failed to confirm final settlement.')
+      }
+    } catch (err) {
+      setSettlementError(err.message || 'Failed to confirm final settlement.')
+    } finally {
+      setSettlementSubmitting(false)
     }
   }
 
@@ -317,10 +379,14 @@ export default function AdminBookingsPage() {
     setReturnFuel('Full')
     setReturnCondition('Good')
     setReturnNotes('')
+    setSettlementNotes('')
+    setSettlementError('')
+    setShowConfirmSettlementDialog(false)
     loadBookingDoc(b)
     loadBookingAgreement(b)
     loadBookingHandover(b)
     loadBookingReturn(b)
+    loadBookingSettlement(b)
   }
 
   const handleUpdateStatus = async (e) => {
@@ -1254,6 +1320,201 @@ export default function AdminBookingsPage() {
                 )}
               </div>
 
+              {/* Final Settlement & Rental Closure Section Card (Phase 7 Demo) */}
+              <div className="inspect-dl-box inspect-settlement-box">
+                <div className="inspect-dl-header">
+                  <div className="dl-title-cluster">
+                    <span className="box-lbl">Final Settlement & Rental Closure</span>
+                    <span className="dl-sub-note">
+                      Phase 7: Additional charges calculation, deposit reconciliation & closure
+                    </span>
+                  </div>
+                  {bookingSettlement?.is_settled && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingSettlementModal(true)}
+                      className="btn-view-settlement-modal"
+                      title="View full statement"
+                    >
+                      <Receipt size={14} />
+                      <span>View Statement</span>
+                    </button>
+                  )}
+                </div>
+
+                {loadingSettlement ? (
+                  <div className="dl-loading-inline">
+                    <Clock size={16} className="spin-slow" />
+                    <span>Loading settlement status...</span>
+                  </div>
+                ) : bookingSettlement?.is_settled ? (
+                  /* ALREADY SETTLED VIEW */
+                  <div className="handover-completed-cluster">
+                    <div className="handover-dispatched-tag">
+                      <CheckCircle2 size={16} className="text-green" />
+                      <span>
+                        Final settlement completed on{' '}
+                        <strong>
+                          {new Date(bookingSettlement.settlement_record.settled_at).toLocaleString('en-IN', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="settlement-preview-card">
+                      <div className="settlement-mini-grid">
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Original Rental</span>
+                          <span className="settle-stat-val">
+                            ₹{Number(bookingSettlement.settlement_record.original_rental_amount).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Extra Distance</span>
+                          <span className="settle-stat-val">
+                            ₹{Number(bookingSettlement.settlement_record.extra_distance_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.settlement_record.extra_distance_km} km extra
+                          </span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Fuel Refill</span>
+                          <span className="settle-stat-val">
+                            ₹{Number(bookingSettlement.settlement_record.fuel_refill_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.settlement_record.ending_fuel_percent}% fuel
+                          </span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Damage Fee</span>
+                          <span className="settle-stat-val">
+                            ₹{Number(bookingSettlement.settlement_record.damage_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.settlement_record.vehicle_condition}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settlement-recon-strip">
+                        <div>
+                          <span className="recon-lbl">Deposit Refund: </span>
+                          <span className="recon-calc">
+                            (Deposit ₹{Number(bookingSettlement.settlement_record.security_deposit_amount).toLocaleString('en-IN')} − Deducted ₹{Number(bookingSettlement.settlement_record.deposit_deduction).toLocaleString('en-IN')})
+                          </span>
+                        </div>
+                        <span className="recon-val">
+                          ₹{Number(bookingSettlement.settlement_record.remaining_refund).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : !bookingReturn?.returned ? (
+                  /* RETURN NOT YET COMPLETED */
+                  <div className="return-locked-hint">
+                    <Clock size={16} />
+                    <span>
+                      Vehicle return and inspection must be recorded before calculating final charges and rental closure.
+                    </span>
+                  </div>
+                ) : bookingSettlement?.preview ? (
+                  /* READY FOR SETTLEMENT */
+                  <div className="settlement-ready-cluster">
+                    <div className="settlement-preview-card">
+                      <div className="settlement-mini-grid">
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Original Rental</span>
+                          <span className="settle-stat-val">
+                            ₹{Number(bookingSettlement.preview.original_rental_amount).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">Base rental</span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Extra Distance</span>
+                          <span className="settle-stat-val text-amber">
+                            ₹{Number(bookingSettlement.preview.extra_distance_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.preview.extra_distance_km} km @ ₹12/km
+                          </span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Fuel Refill</span>
+                          <span className="settle-stat-val text-amber">
+                            ₹{Number(bookingSettlement.preview.fuel_refill_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.preview.ending_fuel_percent}% fuel
+                          </span>
+                        </div>
+                        <div className="settle-stat-card">
+                          <span className="settle-stat-lbl">Damage Assessment</span>
+                          <span className="settle-stat-val text-amber">
+                            ₹{Number(bookingSettlement.preview.damage_charge).toLocaleString('en-IN')}
+                          </span>
+                          <span className="settle-stat-sub">
+                            {bookingSettlement.preview.vehicle_condition}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settlement-recon-strip">
+                        <div>
+                          <span className="recon-lbl">Deposit Refund Due: </span>
+                          <span className="recon-calc">
+                            (Deposit ₹{Number(bookingSettlement.preview.security_deposit_amount).toLocaleString('en-IN')} − Deducted ₹{Number(bookingSettlement.preview.deposit_deduction).toLocaleString('en-IN')})
+                          </span>
+                        </div>
+                        <span className="recon-val">
+                          ₹{Number(bookingSettlement.preview.remaining_refund).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="return-form-field">
+                        <label className="return-label" htmlFor="settlement-admin-notes">
+                          Settlement Remarks (Optional):
+                        </label>
+                        <input
+                          id="settlement-admin-notes"
+                          type="text"
+                          value={settlementNotes}
+                          onChange={(e) => setSettlementNotes(e.target.value)}
+                          placeholder="e.g. Return inspection verified; deposit refunded in demo mode."
+                          className="settlement-notes-input"
+                        />
+                      </div>
+
+                      <div className="return-form-btn-row">
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmSettlementDialog(true)}
+                          className="btn-confirm-settlement"
+                        >
+                          <Coins size={15} />
+                          <span>Confirm Final Settlement & Close Rental</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="return-locked-hint">
+                    <AlertCircle size={16} />
+                    <span>Settlement details unavailable for this booking state.</span>
+                  </div>
+                )}
+
+                {settlementError && (
+                  <div className="modal-error-box" style={{ marginTop: '8px' }}>
+                    <AlertCircle size={14} />
+                    <span>{settlementError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Status Update Form */}
               <form onSubmit={handleUpdateStatus} className="status-update-form">
                 <div className="update-form-field">
@@ -1327,6 +1588,84 @@ export default function AdminBookingsPage() {
           onClose={() => setViewingReturnModal(false)}
           isAdminView={true}
         />
+      )}
+
+      {/* FINAL SETTLEMENT SUMMARY MODAL FOR ADMIN */}
+      {viewingSettlementModal && selectedBooking && (
+        <SettlementSummaryModal
+          isOpen={viewingSettlementModal}
+          booking={selectedBooking}
+          onClose={() => setViewingSettlementModal(false)}
+          isAdminView={true}
+        />
+      )}
+
+      {/* CONFIRM FINAL SETTLEMENT DIALOG */}
+      {showConfirmSettlementDialog && selectedBooking && bookingSettlement?.preview && (
+        <div className="settle-dialog-overlay" onClick={() => !settlementSubmitting && setShowConfirmSettlementDialog(false)}>
+          <div className="settle-dialog-box" onClick={(e) => e.stopPropagation()}>
+            <div className="settle-dialog-header">
+              <Coins size={22} className="text-emerald" />
+              <h4>Confirm Final Settlement &amp; Rental Closure</h4>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 1rem 0' }}>
+              Are you sure you want to confirm final settlement for booking{' '}
+              <strong>{selectedBooking.booking_reference}</strong>? This will complete the booking, reconcile charges against the deposit, and return the vehicle to available status.
+            </p>
+
+            <div className="settle-dialog-summary">
+              <div className="dialog-row">
+                <span>Original Rental Fee:</span>
+                <strong>₹{Number(bookingSettlement.preview.original_rental_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+              </div>
+              <div className="dialog-row">
+                <span>Total Additional Charges:</span>
+                <strong className="text-amber">+₹{Number(bookingSettlement.preview.total_additional_charges).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+              </div>
+              <div className="dialog-row">
+                <span>Final Rental Amount:</span>
+                <strong style={{ color: '#38bdf8' }}>₹{Number(bookingSettlement.preview.final_rental_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+              </div>
+              <div style={{ height: '1px', background: '#334155', margin: '4px 0' }} />
+              <div className="dialog-row">
+                <span>Deposit Deduction:</span>
+                <span>₹{Number(bookingSettlement.preview.deposit_deduction).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="dialog-row">
+                <span>Remaining Deposit Refund:</span>
+                <strong className="text-emerald">₹{Number(bookingSettlement.preview.remaining_refund).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
+
+            {settlementError && (
+              <div className="modal-error-box" style={{ marginBottom: '1rem' }}>
+                <AlertCircle size={15} />
+                <span>{settlementError}</span>
+              </div>
+            )}
+
+            <div className="settle-dialog-actions">
+              <button
+                type="button"
+                onClick={() => setShowConfirmSettlementDialog(false)}
+                disabled={settlementSubmitting}
+                className="btn-cancel-return"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSettlement}
+                disabled={settlementSubmitting}
+                className="btn-confirm-settlement"
+              >
+                <CheckCircle2 size={16} />
+                <span>{settlementSubmitting ? 'Confirming...' : 'Yes, Confirm & Close Rental'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
