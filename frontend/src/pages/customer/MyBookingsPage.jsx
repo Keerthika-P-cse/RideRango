@@ -24,6 +24,7 @@ import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx
 import DrivingLicenceModal from '../../components/customer/DrivingLicenceModal.jsx'
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
+import VehicleReturnModal from '../../components/customer/VehicleReturnModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -41,6 +42,7 @@ export default function MyBookingsPage() {
   const [dlModalBooking, setDlModalBooking] = useState(null)
   const [agreementBooking, setAgreementBooking] = useState(null)
   const [handoverBooking, setHandoverBooking] = useState(null)
+  const [returnModalBooking, setReturnModalBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
@@ -447,6 +449,18 @@ export default function MyBookingsPage() {
                         </button>
                       )}
 
+                      {['active', 'completed'].includes(booking.booking_status) && (
+                        <button
+                          type="button"
+                          onClick={() => setReturnModalBooking(booking)}
+                          className="btn btn-secondary btn-action btn-return-card-btn"
+                          title="View vehicle return & inspection record"
+                        >
+                          <RotateCcw size={14} />
+                          <span>Return Sheet</span>
+                        </button>
+                      )}
+
                       {isPending && (
                         <Link
                           to={`/payment/${booking.id}`}
@@ -674,6 +688,42 @@ export default function MyBookingsPage() {
                     </button>
                   </div>
                 )}
+
+                {/* Vehicle Return Status Overview (Phase 6 Demo) */}
+                {['active', 'completed'].includes(selectedBooking.booking_status) && (
+                  <div className="modal-handover-overview-box modal-return-overview-box">
+                    <div className="handover-overview-header">
+                      <div className="handover-overview-title">
+                        <RotateCcw size={16} />
+                        <strong>Vehicle Return &amp; Inspection</strong>
+                      </div>
+                      <span className={`handover-overview-badge ${
+                        selectedBooking.booking_status === 'completed'
+                          ? 'badge-dispatched'
+                          : 'badge-awaiting'
+                      }`}>
+                        {selectedBooking.booking_status === 'completed' ? 'Inspection Completed' : 'Awaiting Return'}
+                      </span>
+                    </div>
+                    <p className="handover-overview-text">
+                      {selectedBooking.booking_status === 'completed'
+                        ? 'Vehicle return inspection and distance travelled recorded.'
+                        : 'Return vehicle to hub at rental conclusion for staff odometer and condition inspection.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const b = selectedBooking
+                        setSelectedBooking(null)
+                        setReturnModalBooking(b)
+                      }}
+                      className="btn-handover-inline-view btn-return-inline-view"
+                    >
+                      <RotateCcw size={14} />
+                      <span>View Return Sheet</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">
@@ -739,6 +789,21 @@ export default function MyBookingsPage() {
                   >
                     <Car size={16} />
                     <span>Vehicle Handover</span>
+                  </button>
+                )}
+                {['active', 'completed'].includes(selectedBooking.booking_status) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const b = selectedBooking
+                      setSelectedBooking(null)
+                      setReturnModalBooking(b)
+                    }}
+                    className="btn btn-secondary btn-return-modal-trigger"
+                    title="View vehicle return & inspection record"
+                  >
+                    <RotateCcw size={16} />
+                    <span>Vehicle Return</span>
                   </button>
                 )}
                 <button
@@ -833,6 +898,13 @@ export default function MyBookingsPage() {
           isOpen={Boolean(handoverBooking)}
           onClose={() => setHandoverBooking(null)}
           booking={handoverBooking}
+        />
+
+        {/* VEHICLE RETURN MODAL (Phase 6 Demo) */}
+        <VehicleReturnModal
+          isOpen={Boolean(returnModalBooking)}
+          onClose={() => setReturnModalBooking(null)}
+          booking={returnModalBooking}
         />
       </div>
     </div>

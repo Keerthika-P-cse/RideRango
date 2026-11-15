@@ -13,12 +13,14 @@ import {
   Gauge,
   Fuel,
   UserCheck,
-  CheckSquare
+  CheckSquare,
+  RotateCcw
 } from 'lucide-react'
 import adminApi from '../../services/adminApi.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
+import VehicleReturnModal from '../../components/customer/VehicleReturnModal.jsx'
 import './AdminBookingsPage.css'
 
 export default function AdminBookingsPage() {
@@ -61,6 +63,18 @@ export default function AdminBookingsPage() {
   const [handoverSubmitting, setHandoverSubmitting] = useState(false)
   const [handoverError, setHandoverError] = useState('')
   const [viewingHandoverModal, setViewingHandoverModal] = useState(false)
+
+  // Vehicle Return in Booking Modal (Phase 6 Demo)
+  const [bookingReturn, setBookingReturn] = useState(null)
+  const [loadingReturn, setLoadingReturn] = useState(false)
+  const [showReturnForm, setShowReturnForm] = useState(false)
+  const [returnOdometer, setReturnOdometer] = useState('')
+  const [returnFuel, setReturnFuel] = useState('Full')
+  const [returnCondition, setReturnCondition] = useState('Good')
+  const [returnNotes, setReturnNotes] = useState('')
+  const [returnSubmitting, setReturnSubmitting] = useState(false)
+  const [returnError, setReturnError] = useState('')
+  const [viewingReturnModal, setViewingReturnModal] = useState(false)
 
   const loadBookings = useCallback(async () => {
     setLoading(true)
@@ -222,6 +236,72 @@ export default function AdminBookingsPage() {
     }
   }
 
+  const loadBookingReturn = async (b) => {
+    setLoadingReturn(true)
+    setReturnError('')
+    try {
+      const res = await adminApi.getAdminVehicleReturn(b.id)
+      if (res && res.success && res.data) {
+        setBookingReturn(res.data)
+      } else {
+        setBookingReturn({ returned: false })
+      }
+    } catch {
+      setBookingReturn({ returned: false })
+    } finally {
+      setLoadingReturn(false)
+    }
+  }
+
+  const handleRecordReturn = async (e) => {
+    if (e) e.preventDefault()
+    if (!selectedBooking) return
+
+    const endOdo = Number(returnOdometer)
+    const startOdo = bookingHandover?.handover?.odometer_reading
+      ? Number(bookingHandover.handover.odometer_reading)
+      : 0
+
+    if (isNaN(endOdo) || endOdo < 0) {
+      setReturnError('Please enter a valid ending odometer reading (0 or greater).')
+      return
+    }
+
+    if (endOdo < startOdo) {
+      setReturnError(
+        `Ending odometer (${endOdo.toLocaleString('en-IN')} km) cannot be less than starting odometer (${startOdo.toLocaleString('en-IN')} km).`
+      )
+      return
+    }
+
+    setReturnSubmitting(true)
+    setReturnError('')
+    try {
+      const res = await adminApi.recordVehicleReturn({
+        booking_id: selectedBooking.id,
+        odometer_reading: endOdo,
+        fuel_level: returnFuel,
+        vehicle_condition: returnCondition,
+        return_notes: returnNotes
+      })
+
+      if (res && res.success) {
+        setSuccessMsg(
+          `Vehicle return recorded for ${selectedBooking.booking_reference}. Distance: ${res.data?.distance_travelled} km. Pending Phase 7 final settlement.`
+        )
+        setShowReturnForm(false)
+        await loadBookingReturn(selectedBooking)
+        await loadBookings()
+      } else {
+        setReturnError(res.message || 'Failed to record vehicle return inspection.')
+      }
+    } catch (err) {
+      setReturnError(err.message || 'Failed to record vehicle return inspection.')
+    } finally {
+      setReturnSubmitting(false)
+    }
+  }
+
   const handleOpenDetailModal = (b) => {
     setSelectedBooking(b)
     setNewStatus(b.booking_status)
@@ -231,9 +311,16 @@ export default function AdminBookingsPage() {
     setHandoverOdometer('12500')
     setHandoverFuel('Full')
     setHandoverNotes('')
+    setShowReturnForm(false)
+    setReturnError('')
+    setReturnOdometer('')
+    setReturnFuel('Full')
+    setReturnCondition('Good')
+    setReturnNotes('')
     loadBookingDoc(b)
     loadBookingAgreement(b)
     loadBookingHandover(b)
+    loadBookingReturn(b)
   }
 
   const handleUpdateStatus = async (e) => {
@@ -891,6 +978,282 @@ export default function AdminBookingsPage() {
                 )}
               </div>
 
+              {/* Vehicle Return & Inspection Section Card (Phase 6 Demo) */}
+              <div className="inspect-dl-box inspect-return-box">
+                <div className="inspect-dl-header">
+                  <div className="dl-title-cluster">
+                    <span className="box-lbl">Vehicle Return &amp; Inspection</span>
+                    <span className="dl-sub-note">
+                      Phase 6: Odometer check, mileage calculation &amp; vehicle condition inspection
+                    </span>
+                  </div>
+                  {bookingReturn && (
+                    <span
+                      className={`doc-status-badge ${
+                        bookingReturn.returned
+                          ? 'badge-accepted'
+                          : selectedBooking.booking_status === 'active' && bookingHandover?.handed_over
+                          ? 'badge-pending'
+                          : 'badge-not_submitted'
+                      }`}
+                    >
+                      {bookingReturn.returned
+                        ? 'Return Completed / Inspection Pending'
+                        : selectedBooking.booking_status === 'active' && bookingHandover?.handed_over
+                        ? 'Ready for Return'
+                        : 'Awaiting Active Rental'}
+                    </span>
+                  )}
+                </div>
+
+                {loadingReturn ? (
+                  <p className="dl-empty-note">Loading return inspection status...</p>
+                ) : bookingReturn?.returned && bookingReturn.return_data ? (
+                  /* ALREADY RETURNED */
+                  <div className="return-admin-completed">
+                    <div className="return-completed-summary">
+                      <div className="return-stat-line">
+                        <CheckCircle2 size={16} className="text-green" />
+                        <span>
+                          Vehicle returned on{' '}
+                          <strong>
+                            {new Date(bookingReturn.return_data.return_datetime).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short'
+                            })}
+                          </strong>
+                        </span>
+                      </div>
+
+                      <div className="return-metrics-inline">
+                        <div className="r-metric">
+                          <Gauge size={14} />
+                          <span>
+                            Distance:{' '}
+                            <strong className="text-distance">
+                              {Number(bookingReturn.return_data.distance_travelled).toLocaleString('en-IN')} km
+                            </strong>{' '}
+                            ({Number(bookingReturn.return_data.starting_odometer).toLocaleString('en-IN')} &rarr;{' '}
+                            {Number(bookingReturn.return_data.ending_odometer).toLocaleString('en-IN')} km)
+                          </span>
+                        </div>
+
+                        <div className="r-metric">
+                          <Fuel size={14} />
+                          <span>
+                            Fuel: <strong>{bookingReturn.return_data.ending_fuel_display}</strong>
+                          </span>
+                        </div>
+
+                        <div className="r-metric">
+                          <span
+                            className={`condition-pill ${
+                              String(bookingReturn.return_data.vehicle_condition).toLowerCase().includes('damage')
+                                ? 'pill-damage'
+                                : 'pill-ok'
+                            }`}
+                          >
+                            Condition: {bookingReturn.return_data.vehicle_condition}
+                          </span>
+                        </div>
+
+                        <div className="r-metric">
+                          <UserCheck size={14} />
+                          <span>
+                            Inspector: <strong>{bookingReturn.return_data.recorded_by}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      {bookingReturn.return_data.return_notes && (
+                        <p className="return-admin-notes">
+                          Remarks: <em>{bookingReturn.return_data.return_notes}</em>
+                        </p>
+                      )}
+
+                      <div className="return-settlement-tag">
+                        <Clock size={13} />
+                        <span>Vehicle remains unavailable pending Phase 7 deposit release &amp; rental closure.</span>
+                      </div>
+                    </div>
+
+                    <div className="agr-admin-btn-row">
+                      <button
+                        type="button"
+                        onClick={() => setViewingReturnModal(true)}
+                        className="btn-view-agreement"
+                      >
+                        <Eye size={14} />
+                        <span>View Return Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* NOT YET RETURNED */
+                  <div className="return-admin-actions">
+                    {selectedBooking.booking_status !== 'active' ? (
+                      <div className="return-locked-hint">
+                        <Clock size={16} />
+                        <span>
+                          Vehicle return inspection is available only for ACTIVE rentals (current:{' '}
+                          {selectedBooking.booking_status}).
+                        </span>
+                      </div>
+                    ) : !bookingHandover?.handed_over ? (
+                      <div className="return-locked-hint">
+                        <AlertCircle size={16} />
+                        <span>
+                          Vehicle handover must be completed before recording return inspection.
+                        </span>
+                      </div>
+                    ) : !showReturnForm ? (
+                      <div className="return-start-wrap">
+                        <p className="dl-empty-note">
+                          Rental is active. Starting odometer:{' '}
+                          <strong>
+                            {Number(bookingHandover.handover?.odometer_reading || 0).toLocaleString('en-IN')} km
+                          </strong>
+                          . Ready to inspect ending odometer and condition.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReturnForm(true)
+                            setReturnError('')
+                            const startOdo = Number(bookingHandover.handover?.odometer_reading || 0)
+                            if (!returnOdometer) {
+                              setReturnOdometer(String(startOdo + 180))
+                            }
+                          }}
+                          className="btn-start-return"
+                        >
+                          <RotateCcw size={16} />
+                          <span>Record Vehicle Return</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* RETURN INSPECTION FORM */
+                      <form onSubmit={handleRecordReturn} className="return-admin-form">
+                        <div className="return-form-header">
+                          <RotateCcw size={18} />
+                          <strong>Vehicle Return &amp; Inspection Form</strong>
+                        </div>
+
+                        <div className="return-form-baseline-tag">
+                          <span>
+                            Starting Odometer:{' '}
+                            <strong>
+                              {Number(bookingHandover.handover?.odometer_reading || 0).toLocaleString('en-IN')} km
+                            </strong>{' '}
+                            &bull; Starting Fuel:{' '}
+                            <strong>{bookingHandover.handover?.fuel_level_display || '100%'}</strong>
+                          </span>
+                        </div>
+
+                        <div className="return-form-row">
+                          <div className="form-field-group">
+                            <label>Ending Odometer (km):</label>
+                            <input
+                              type="number"
+                              min={Number(bookingHandover.handover?.odometer_reading || 0)}
+                              value={returnOdometer}
+                              onChange={(e) => setReturnOdometer(e.target.value)}
+                              placeholder={`Min: ${Number(bookingHandover.handover?.odometer_reading || 0)}`}
+                              required
+                              className="return-input"
+                            />
+                            {returnOdometer &&
+                              Number(returnOdometer) >= Number(bookingHandover.handover?.odometer_reading || 0) && (
+                                <span className="calc-distance-hint">
+                                  Distance: +
+                                  {Number(returnOdometer) -
+                                    Number(bookingHandover.handover?.odometer_reading || 0)}{' '}
+                                  km
+                                </span>
+                              )}
+                          </div>
+
+                          <div className="form-field-group">
+                            <label>Ending Fuel Level:</label>
+                            <select
+                              value={returnFuel}
+                              onChange={(e) => setReturnFuel(e.target.value)}
+                              className="return-select"
+                            >
+                              <option value="Full">Full (100%)</option>
+                              <option value="3/4">¾ (75%)</option>
+                              <option value="1/2">½ (50%)</option>
+                              <option value="1/4">¼ (25%)</option>
+                              <option value="Empty">Empty (0%)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="return-form-row">
+                          <div className="form-field-group full-width">
+                            <label>Vehicle Condition:</label>
+                            <select
+                              value={returnCondition}
+                              onChange={(e) => setReturnCondition(e.target.value)}
+                              className="return-select"
+                            >
+                              <option value="Excellent">Excellent (No defects, clean interior &amp; exterior)</option>
+                              <option value="Good">Good (Normal minor wear, no chargeable damage)</option>
+                              <option value="Minor Damage">Minor Damage (Small scratch/dent - Flagged for charges)</option>
+                              <option value="Major Damage">Major Damage (Body/engine damage - Escalated review)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-field-group full-width">
+                          <label>Inspection Remarks (Optional):</label>
+                          <textarea
+                            value={returnNotes}
+                            onChange={(e) => setReturnNotes(e.target.value)}
+                            placeholder="e.g. Returned clean, toolkit intact, minor scratch noted on rear bumper."
+                            rows={2}
+                            className="return-textarea"
+                          />
+                        </div>
+
+                        <div className="return-confirm-notice">
+                          <AlertCircle size={14} />
+                          <span>
+                            Recording return logs vehicle condition and mileage. <strong>Vehicle remains unavailable</strong> until final Phase 7 deposit release and closure.
+                          </span>
+                        </div>
+
+                        <div className="return-form-btn-row">
+                          <button
+                            type="submit"
+                            disabled={returnSubmitting}
+                            className="btn-confirm-return"
+                          >
+                            <CheckSquare size={15} />
+                            <span>{returnSubmitting ? 'Recording Return...' : 'Confirm Return Inspection'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowReturnForm(false)}
+                            disabled={returnSubmitting}
+                            className="btn-cancel-return"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {returnError && (
+                  <div className="modal-error-box" style={{ marginTop: '8px' }}>
+                    <AlertCircle size={14} />
+                    <span>{returnError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Status Update Form */}
               <form onSubmit={handleUpdateStatus} className="status-update-form">
                 <div className="update-form-field">
@@ -952,6 +1315,16 @@ export default function AdminBookingsPage() {
           isOpen={viewingHandoverModal}
           booking={selectedBooking}
           onClose={() => setViewingHandoverModal(false)}
+          isAdminView={true}
+        />
+      )}
+
+      {/* VEHICLE RETURN REVIEW MODAL FOR ADMIN */}
+      {viewingReturnModal && selectedBooking && (
+        <VehicleReturnModal
+          isOpen={viewingReturnModal}
+          booking={selectedBooking}
+          onClose={() => setViewingReturnModal(false)}
           isAdminView={true}
         />
       )}

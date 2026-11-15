@@ -866,3 +866,41 @@
   color: #ffffff;
   border-color: #2563eb;
 }
+
+/* Phase 6: Demo Vehicle Return Elements */
+.btn-return-card-btn {
+  background: rgba(2, 132, 199, 0.12) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(2, 132, 199, 0.3) !important;
+}
+
+.btn-return-card-btn:hover {
+  background: rgba(2, 132, 199, 0.25) !important;
+  border-color: #38bdf8 !important;
+}
+
+.btn-return-modal-trigger {
+  background: #1e293b;
+  color: #7dd3fc;
+  border: 1px solid #0284c7;
+}
+
+.btn-return-modal-trigger:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.modal-return-overview-box {
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+.btn-return-inline-view {
+  color: #38bdf8 !important;
+  border-color: rgba(2, 132, 199, 0.4) !important;
+}
+
+.btn-return-inline-view:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}

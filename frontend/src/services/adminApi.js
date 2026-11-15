@@ -123,6 +123,14 @@ export const adminApi = {
   getAdminHandoversList: () =>
     adminRequest('/handovers/admin/list'),
 
+  // Phase 6: Vehicle Return & Inspection
+  recordVehicleReturn: (payload) =>
+    adminRequest('/returns', { method: 'POST', body: payload }),
+  getAdminVehicleReturn: (bookingId) =>
+    adminRequest(`/returns/booking/${bookingId}`),
+  getAdminReturnsList: () =>
+    adminRequest('/returns/admin/list'),
+
   // Customers
   getCustomers: () => adminRequest('/admin/customers'),
   getCustomerHistory: (id) => adminRequest(`/admin/customers/${id}/bookings`),
