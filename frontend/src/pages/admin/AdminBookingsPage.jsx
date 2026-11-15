@@ -6,10 +6,13 @@ import {
   X,
   AlertCircle,
   MapPin,
-  Calendar
+  Calendar,
+  Clock,
+  FileSignature
 } from 'lucide-react'
 import adminApi from '../../services/adminApi.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
+import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import './AdminBookingsPage.css'
 
 export default function AdminBookingsPage() {
@@ -34,6 +37,13 @@ export default function AdminBookingsPage() {
   const [docActionLoading, setDocActionLoading] = useState(false)
   const [docActionError, setDocActionError] = useState('')
   const [previewImage, setPreviewImage] = useState(null)
+
+  // Rental Agreement in Booking Modal (Phase 4 Demo)
+  const [bookingAgreement, setBookingAgreement] = useState(null)
+  const [loadingAgreement, setLoadingAgreement] = useState(false)
+  const [generatingAgreement, setGeneratingAgreement] = useState(false)
+  const [agreementActionError, setAgreementActionError] = useState('')
+  const [viewingAgreementModal, setViewingAgreementModal] = useState(false)
 
   const loadBookings = useCallback(async () => {
     setLoading(true)
@@ -101,11 +111,48 @@ export default function AdminBookingsPage() {
     }
   }
 
+  const loadBookingAgreement = async (b) => {
+    setLoadingAgreement(true)
+    setAgreementActionError('')
+    try {
+      const res = await adminApi.getAdminAgreement(b.id)
+      if (res && res.success && res.data) {
+        setBookingAgreement(res.data)
+      } else {
+        setBookingAgreement({ status: 'not_generated' })
+      }
+    } catch {
+      setBookingAgreement({ status: 'not_generated' })
+    } finally {
+      setLoadingAgreement(false)
+    }
+  }
+
+  const handleGenerateAgreement = async () => {
+    if (!selectedBooking) return
+    setGeneratingAgreement(true)
+    setAgreementActionError('')
+    try {
+      const res = await adminApi.generateAgreement(selectedBooking.id)
+      if (res && res.success && res.data) {
+        setBookingAgreement(res.data)
+        setSuccessMsg(`Rental agreement generated for ${selectedBooking.booking_reference}. Awaiting customer acceptance.`)
+      } else {
+        setAgreementActionError(res.message || 'Failed to generate agreement.')
+      }
+    } catch (err) {
+      setAgreementActionError(err.message || 'Failed to generate rental agreement.')
+    } finally {
+      setGeneratingAgreement(false)
+    }
+  }
+
   const handleOpenDetailModal = (b) => {
     setSelectedBooking(b)
     setNewStatus(b.booking_status)
     setUpdateError('')
     loadBookingDoc(b)
+    loadBookingAgreement(b)
   }
 
   const handleUpdateStatus = async (e) => {
@@ -461,6 +508,94 @@ export default function AdminBookingsPage() {
                 )}
               </div>
 
+              {/* Rental Agreement Section Card (Phase 4 Demo) */}
+              <div className="inspect-dl-box inspect-agreement-box">
+                <div className="inspect-dl-header">
+                  <div className="dl-title-cluster">
+                    <span className="box-lbl">Rental Agreement</span>
+                    <span className="dl-sub-note">Demo vehicle rental agreement &amp; digital acceptance status</span>
+                  </div>
+                  {bookingAgreement && (
+                    <span className={`doc-status-badge ${
+                      bookingAgreement.agreement_status === 'accepted' ? 'badge-accepted' :
+                      bookingAgreement.agreement_status === 'pending' ? 'badge-pending' : 'badge-not_submitted'
+                    }`}>
+                      {bookingAgreement.agreement_status === 'accepted' ? 'Accepted' :
+                       bookingAgreement.agreement_status === 'pending' ? 'Pending Customer Acceptance' : 'Not Generated'}
+                    </span>
+                  )}
+                </div>
+
+                {loadingAgreement ? (
+                  <p className="dl-empty-note">Loading agreement status...</p>
+                ) : !bookingAgreement || bookingAgreement.status === 'not_generated' || !bookingAgreement.agreement_status ? (
+                  <div className="agr-admin-panel">
+                    <p className="dl-empty-note">
+                      No rental agreement has been generated yet for this booking.
+                    </p>
+                    {['confirmed', 'active', 'completed'].includes(selectedBooking.booking_status) ? (
+                      <button
+                        type="button"
+                        onClick={handleGenerateAgreement}
+                        disabled={generatingAgreement}
+                        className="btn-generate-agreement"
+                      >
+                        <FileSignature size={15} />
+                        <span>{generatingAgreement ? 'Generating...' : 'Generate Agreement'}</span>
+                      </button>
+                    ) : (
+                      <span className="agr-ineligible-hint">
+                        Agreements can only be generated for confirmed bookings.
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="agr-admin-panel">
+                    <div className="agr-admin-details">
+                      <div>
+                        <span className="agr-lbl">Agreement Ref:</span>{' '}
+                        <strong>{bookingAgreement.agreement_reference}</strong>
+                      </div>
+                      {bookingAgreement.agreement_status === 'accepted' ? (
+                        <div className="agr-accepted-meta">
+                          <CheckCircle2 size={15} />
+                          <span>
+                            Accepted by customer on{' '}
+                            {new Date(bookingAgreement.accepted_at).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short'
+                            })}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="agr-pending-meta">
+                          <Clock size={15} />
+                          <span>Generated &bull; Awaiting customer acceptance</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="agr-admin-btn-row">
+                      <button
+                        type="button"
+                        onClick={() => setViewingAgreementModal(true)}
+                        className="btn-view-agreement"
+                      >
+                        <Eye size={14} />
+                        <span>View Full Agreement</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {agreementActionError && (
+                  <div className="modal-error-box" style={{ marginTop: '8px' }}>
+                    <AlertCircle size={14} />
+                    <span>{agreementActionError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Status Update Form */}
               <form onSubmit={handleUpdateStatus} className="status-update-form">
                 <div className="update-form-field">
@@ -504,6 +639,16 @@ export default function AdminBookingsPage() {
             <img src={previewImage} alt="Driving Licence Preview" className="dl-lightbox-img" />
           </div>
         </div>
+      )}
+
+      {/* RENTAL AGREEMENT REVIEW MODAL FOR ADMIN */}
+      {viewingAgreementModal && selectedBooking && (
+        <RentalAgreementModal
+          isOpen={viewingAgreementModal}
+          booking={selectedBooking}
+          onClose={() => setViewingAgreementModal(false)}
+          isAdminView={true}
+        />
       )}
     </div>
   )

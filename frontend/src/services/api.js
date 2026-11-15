@@ -265,6 +265,17 @@ export const api = {
     })
   },
 
+  // Phase 4: Rental Agreements
+  getRentalAgreement: async (bookingId) => {
+    return request(`/agreements/booking/${bookingId}`)
+  },
+
+  acceptRentalAgreement: async (agreementId) => {
+    return request(`/agreements/${agreementId}/accept`, {
+      method: 'POST'
+    })
+  },
+
   getBaseUrl: () => API_BASE_URL
 }
 

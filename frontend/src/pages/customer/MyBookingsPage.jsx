@@ -8,6 +8,7 @@ import {
   CreditCard,
   Eye,
   FileText,
+  FileSignature,
   MapPin,
   RefreshCw,
   RotateCcw,
@@ -20,6 +21,7 @@ import { useAuth } from '../../context/useAuth.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx'
 import DrivingLicenceModal from '../../components/customer/DrivingLicenceModal.jsx'
+import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -35,6 +37,7 @@ export default function MyBookingsPage() {
   const [cancellingBooking, setCancellingBooking] = useState(null)
   const [receiptBooking, setReceiptBooking] = useState(null)
   const [dlModalBooking, setDlModalBooking] = useState(null)
+  const [agreementBooking, setAgreementBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
@@ -417,6 +420,18 @@ export default function MyBookingsPage() {
                         </button>
                       )}
 
+                      {['confirmed', 'active', 'completed'].includes(booking.booking_status) && (
+                        <button
+                          type="button"
+                          onClick={() => setAgreementBooking(booking)}
+                          className="btn btn-secondary btn-action btn-agreement-card-btn"
+                          title="View and accept demonstration rental agreement"
+                        >
+                          <FileSignature size={15} />
+                          <span>Agreement</span>
+                        </button>
+                      )}
+
                       {isPending && (
                         <Link
                           to={`/payment/${booking.id}`}
@@ -641,6 +656,21 @@ export default function MyBookingsPage() {
                   <ShieldCheck size={16} />
                   <span>Driving Licence</span>
                 </button>
+                {['confirmed', 'active', 'completed'].includes(selectedBooking.booking_status) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const b = selectedBooking
+                      setSelectedBooking(null)
+                      setAgreementBooking(b)
+                    }}
+                    className="btn btn-secondary btn-agreement-modal-trigger"
+                    title="View and accept demonstration rental agreement"
+                  >
+                    <FileSignature size={16} />
+                    <span>Rental Agreement</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelectedBooking(null)}
@@ -717,6 +747,14 @@ export default function MyBookingsPage() {
           isOpen={Boolean(dlModalBooking)}
           onClose={() => setDlModalBooking(null)}
           booking={dlModalBooking}
+          onStatusUpdated={() => fetchBookings()}
+        />
+
+        {/* RENTAL AGREEMENT MODAL (Phase 4 Demo) */}
+        <RentalAgreementModal
+          isOpen={Boolean(agreementBooking)}
+          onClose={() => setAgreementBooking(null)}
+          booking={agreementBooking}
           onStatusUpdated={() => fetchBookings()}
         />
       </div>

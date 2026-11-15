@@ -6,6 +6,7 @@ import bookingRoutes from './bookingRoutes.js'
 import paymentRoutes from './paymentRoutes.js'
 import adminRoutes from './adminRoutes.js'
 import documentRoutes from './documentRoutes.js'
+import agreementRoutes from './agreementRoutes.js'
 
 const apiRouter = Router()
 
@@ -29,5 +30,8 @@ apiRouter.use('/admin', adminRoutes)
 
 // Documents (Demo Driving Licence Verification)
 apiRouter.use('/documents', documentRoutes)
+
+// Phase 4: Agreements (Demo Rental Agreement Acceptance)
+apiRouter.use('/agreements', agreementRoutes)
 
 export default apiRouter

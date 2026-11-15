@@ -260,3 +260,27 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   INDEX idx_audit_actor (actor_type, actor_id),
   INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 12. RENTAL AGREEMENTS (PHASE 4 DEMO)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rental_agreements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  agreement_reference VARCHAR(50) NOT NULL UNIQUE,
+  booking_id INT NOT NULL UNIQUE,
+  customer_id INT NOT NULL,
+  vehicle_id INT NOT NULL,
+  generated_by_staff_id INT DEFAULT NULL,
+  agreement_status ENUM('pending', 'accepted') NOT NULL DEFAULT 'pending',
+  terms_content TEXT DEFAULT NULL,
+  accepted_at DATETIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_agreements_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  CONSTRAINT fk_agreements_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_agreements_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_agreements_staff FOREIGN KEY (generated_by_staff_id) REFERENCES staff(id) ON DELETE SET NULL,
+  INDEX idx_agreements_booking (booking_id),
+  INDEX idx_agreements_customer (customer_id),
+  INDEX idx_agreements_status (agreement_status)
+) ENGINE=InnoDB;

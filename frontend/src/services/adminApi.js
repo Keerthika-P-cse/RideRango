@@ -107,6 +107,14 @@ export const adminApi = {
       body: { action, reason }
     }),
 
+  // Phase 4: Rental Agreements
+  generateAgreement: (bookingId) =>
+    adminRequest('/agreements/generate', { method: 'POST', body: { booking_id: bookingId } }),
+  getAdminAgreement: (bookingId) =>
+    adminRequest(`/agreements/booking/${bookingId}`),
+  getAdminAgreements: () =>
+    adminRequest('/agreements/admin/list'),
+
   // Customers
   getCustomers: () => adminRequest('/admin/customers'),
   getCustomerHistory: (id) => adminRequest(`/admin/customers/${id}/bookings`),

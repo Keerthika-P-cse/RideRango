@@ -566,3 +566,103 @@
   background: #000000;
   display: block;
 }
+
+/* Agreement Section in Admin Booking Details Modal (Phase 4 Demo) */
+.inspect-agreement-box {
+  margin-top: 4px;
+}
+
+.agr-admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-generate-agreement {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-primary, #e5232e);
+  color: #ffffff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(229, 35, 46, 0.3);
+}
+
+.btn-generate-agreement:hover:not(:disabled) {
+  background: #f01e2c;
+  transform: translateY(-1px);
+}
+
+.btn-generate-agreement:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agr-ineligible-hint {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.agr-admin-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: #e2e8f0;
+}
+
+.agr-lbl {
+  color: #94a3b8;
+}
+
+.agr-accepted-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #34d399;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.agr-pending-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.agr-admin-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-view-agreement {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-view-agreement:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+}
