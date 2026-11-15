@@ -722,10 +722,9 @@
     visibility: visible;
   }
 
-  /* Completely eliminate non-printable components */
+  /* Completely eliminate non-printable components & screen navigation */
   .no-print,
   .receipt-modal-topbar,
-  .receipt-modal-backdrop,
   header:not(.receipt-header),
   nav,
   footer:not(.receipt-footer) {
@@ -737,14 +736,73 @@
     opacity: 0 !important;
   }
 
-  /* Format receipt document to fill full printable area cleanly */
+  /* Suppress surrounding page content & sibling elements so no blank pages are generated */
+  .bookings-container > *:not(.receipt-modal-backdrop),
+  .payment-container > *:not(.receipt-modal-backdrop),
+  .payment-success-card,
+  .payment-layout,
+  .bookings-header-row,
+  .bookings-filter-bar,
+  .bookings-tabs-bar,
+  .bookings-list-grid {
+    display: none !important;
+  }
+
+  /* Reset outer layout wrappers to prevent multi-page whitespace */
+  .customer-layout-shell,
+  .customer-main-content,
+  .my-bookings-wrapper,
+  .bookings-container,
+  .payment-page-wrapper,
+  .payment-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: transparent !important;
+  }
+
+  /* Neutralize modal backdrop & container for print (preserve receipt document in normal flow) */
+  .receipt-modal-backdrop {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  .receipt-modal-container {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    max-height: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  /* Format receipt document to fill printable area cleanly */
   .payment-receipt-print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #0f172a !important;
@@ -753,8 +811,6 @@
     box-shadow: none !important;
     overflow: visible !important;
     max-height: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   /* Page break rules */

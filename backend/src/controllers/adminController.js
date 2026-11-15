@@ -4,6 +4,7 @@ import pool from '../config/db.js'
 import { env } from '../config/env.js'
 import { sendSuccess, sendError } from '../utils/apiResponse.js'
 import { enrichVehicleData } from '../services/vehicleService.js'
+import bookingService from '../services/bookingService.js'
 
 /**
  * 1. Staff / Admin Login
@@ -469,46 +470,30 @@ export const getAdminBookings = async (req, res) => {
 
 /**
  * 9. Booking Management: Update Booking Status
+ * Safely handles lifecycle transitions, row locks, conflict checks, and vehicle availability.
  */
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params
-    const { status } = req.body
+    const { status, reason } = req.body
+    const staffId = req.staff?.id || null
 
-    const allowed = ['pending', 'confirmed', 'active', 'in_progress', 'completed', 'cancelled']
-    if (!allowed.includes(status)) {
-      return sendError(res, `Invalid status. Allowed values: ${allowed.join(', ')}`, 400)
+    if (!status) {
+      return sendError(res, 'Status is required.', 400)
     }
 
-    // Map 'in_progress' to DB enum 'active'
-    const dbStatus = status === 'in_progress' ? 'active' : status
+    const result = await bookingService.updateBookingStatusByAdmin(id, status, {
+      staffId,
+      reason
+    })
 
-    const [booking] = await pool.query('SELECT id, vehicle_id, booking_status FROM bookings WHERE id = ?', [id])
-    if (booking.length === 0) {
-      return sendError(res, 'Booking not found.', 404)
-    }
-
-    await pool.query(
-      `UPDATE bookings SET booking_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [dbStatus, id]
-    )
-
-    if (dbStatus === 'completed' || dbStatus === 'cancelled') {
-      await pool.query(
-        `UPDATE vehicles SET availability_status = 'available' WHERE id = ?`,
-        [booking[0].vehicle_id]
-      )
-    } else if (dbStatus === 'confirmed' || dbStatus === 'active') {
-      await pool.query(
-        `UPDATE vehicles SET availability_status = 'booked' WHERE id = ?`,
-        [booking[0].vehicle_id]
-      )
-    }
-
-    return sendSuccess(res, `Booking status updated to ${dbStatus}.`, { id, status: dbStatus })
+    return sendSuccess(res, result.message, result.data)
   } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.message, err.statusCode)
+    }
     console.error('updateBookingStatus error:', err)
-    return sendError(res, 'Failed to update booking status.', 500)
+    return sendError(res, err.message || 'Failed to update booking status.', 500)
   }
 }
 

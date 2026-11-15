@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Calendar, Clock, MapPin, Search } from 'lucide-react'
+import { AlertCircle, Calendar, Car, Clock, MapPin, Search } from 'lucide-react'
 import { pickupLocations } from '../../data/vehiclesData.js'
 import './SearchWidget.css'
 
@@ -239,12 +239,13 @@ export default function SearchWidget() {
               <div className="form-group">
                 <label htmlFor="vehicleType">Vehicle Type</label>
                 <div className="input-with-icon">
+                  <Car size={16} className="field-icon" />
                   <select
                     id="vehicleType"
                     name="vehicleType"
                     value={searchParams.vehicleType}
                     onChange={handleInputChange}
-                    className="search-select"
+                    className="search-select with-icon"
                   >
                     <option value="all">All Vehicles</option>
                     <option value="cars">Cars</option>

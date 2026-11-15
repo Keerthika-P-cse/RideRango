@@ -595,6 +595,374 @@ export const bookingService = {
         connection.release()
       }
     })
+  },
+
+  /**
+   * Admin / Staff Booking Status Transition & Vehicle Availability Management
+   * Enforces valid lifecycle state transitions, concurrency safety with row locks,
+   * accurate vehicle availability updates, conflict prevention, and payment preservation.
+   *
+   * @param {number|string} bookingId - Target booking ID
+   * @param {string} targetStatus - Requested status ('pending', 'confirmed', 'active', 'in_progress', 'completed', 'cancelled')
+   * @param {Object} options - { staffId, reason }
+   * @param {Object} dbPool - Database connection pool (defaults to main pool)
+   */
+  async updateBookingStatusByAdmin(bookingId, targetStatus, { staffId = null, reason = '' } = {}, dbPool = pool) {
+    if (!bookingId || isNaN(Number(bookingId))) {
+      const err = new Error('Valid booking ID is required.')
+      err.statusCode = 400
+      throw err
+    }
+
+    const allowedStatuses = ['pending', 'confirmed', 'active', 'in_progress', 'completed', 'cancelled']
+    if (!targetStatus || !allowedStatuses.includes(String(targetStatus).trim().toLowerCase())) {
+      const err = new Error(`Invalid status. Allowed values: ${allowedStatuses.join(', ')}`)
+      err.statusCode = 400
+      throw err
+    }
+
+    const normalizedTarget = String(targetStatus).trim().toLowerCase() === 'in_progress' ? 'active' : String(targetStatus).trim().toLowerCase()
+
+    return withDeadlockRetry(async () => {
+      const connection = await dbPool.getConnection()
+      try {
+        await connection.beginTransaction()
+
+        // Step 1: Look up vehicle_id first so we can acquire locks in consistent hierarchy:
+        // Order: vehicles -> bookings
+        const [lookupRows] = await connection.query(
+          `SELECT id, vehicle_id FROM bookings WHERE id = ?`,
+          [bookingId]
+        )
+
+        if (lookupRows.length === 0) {
+          const err = new Error('Booking not found.')
+          err.statusCode = 404
+          throw err
+        }
+
+        const vehicleId = lookupRows[0].vehicle_id
+
+        // Step 2: Lock the vehicle row first
+        const [vehicleRows] = await connection.query(
+          `SELECT id, make, model, registration_number, availability_status, is_active
+           FROM vehicles
+           WHERE id = ?
+           FOR UPDATE`,
+          [vehicleId]
+        )
+
+        if (vehicleRows.length === 0) {
+          const err = new Error('Associated vehicle not found.')
+          err.statusCode = 404
+          throw err
+        }
+        const vehicle = vehicleRows[0]
+
+        // Step 3: Lock the target booking row
+        const [bookingRows] = await connection.query(
+          `SELECT id, booking_reference, customer_id, vehicle_id, start_date, end_date,
+                  booking_status, cancellation_reason, approved_by_staff_id, total_amount
+           FROM bookings
+           WHERE id = ?
+           FOR UPDATE`,
+          [bookingId]
+        )
+
+        if (bookingRows.length === 0) {
+          const err = new Error('Booking not found.')
+          err.statusCode = 404
+          throw err
+        }
+        const booking = bookingRows[0]
+        const currentStatus = booking.booking_status
+
+        // Step 4: Check if already in target status (idempotent no-op)
+        if (currentStatus === normalizedTarget) {
+          await connection.commit()
+          return {
+            message: `Booking is already in '${normalizedTarget}' status.`,
+            data: {
+              id: Number(bookingId),
+              status: normalizedTarget,
+              previous_status: currentStatus,
+              vehicle_id: vehicleId,
+              vehicle_availability: vehicle.availability_status,
+              no_change: true
+            }
+          }
+        }
+
+        // Step 5: Enforce Terminal State Protections (Requirement B)
+        if (currentStatus === 'cancelled') {
+          const err = new Error('Cannot update status. Cancelled bookings are terminal and cannot be reopened.')
+          err.statusCode = 400
+          throw err
+        }
+
+        if (currentStatus === 'completed') {
+          const err = new Error('Cannot update status. Completed bookings are terminal and cannot be modified.')
+          err.statusCode = 400
+          throw err
+        }
+
+        if (currentStatus === 'rejected') {
+          const err = new Error('Cannot update status. Rejected bookings are terminal and cannot be reopened.')
+          err.statusCode = 400
+          throw err
+        }
+
+        // Step 6: Enforce Allowed State Transitions (Requirement A)
+        const VALID_TRANSITIONS = {
+          pending: ['confirmed', 'cancelled'],
+          confirmed: ['active', 'cancelled'],
+          active: ['completed'],
+          completed: [],
+          cancelled: [],
+          rejected: []
+        }
+
+        const allowedNext = VALID_TRANSITIONS[currentStatus] || []
+        if (!allowedNext.includes(normalizedTarget)) {
+          let detail = `Transition from '${currentStatus}' to '${normalizedTarget}' is not permitted.`
+          if (currentStatus === 'pending' && normalizedTarget === 'active') {
+            detail = `Cannot transition booking directly from 'pending' to 'active'. Booking must be confirmed first.`
+          } else if (currentStatus === 'pending' && normalizedTarget === 'completed') {
+            detail = `Cannot transition booking directly from 'pending' to 'completed'.`
+          } else if (currentStatus === 'confirmed' && normalizedTarget === 'pending') {
+            detail = `Cannot downgrade confirmed booking to 'pending'.`
+          } else if (currentStatus === 'confirmed' && normalizedTarget === 'completed') {
+            detail = `Cannot transition booking directly from 'confirmed' to 'completed'. Vehicle must be marked active upon handover first.`
+          } else if (currentStatus === 'active' && normalizedTarget === 'cancelled') {
+            detail = `Active rentals cannot be cancelled; the rental must be completed upon vehicle return.`
+          } else if (currentStatus === 'active' && (normalizedTarget === 'pending' || normalizedTarget === 'confirmed')) {
+            detail = `Cannot revert active rental to '${normalizedTarget}'.`
+          }
+          const err = new Error(detail)
+          err.statusCode = 400
+          throw err
+        }
+
+        // Step 7: Transition-Specific Checks & Execution
+        let nextVehicleStatus = vehicle.availability_status
+
+        if (normalizedTarget === 'confirmed') {
+          // Transitioning pending -> confirmed
+          // Check overlapping confirmed or active bookings on this vehicle for the date range
+          const [conflicts] = await connection.query(
+            `SELECT id, booking_reference, booking_status, start_date, end_date
+             FROM bookings
+             WHERE vehicle_id = ?
+               AND booking_status IN ('confirmed', 'active')
+               AND id != ?
+               AND start_date < ?
+               AND end_date > ?
+             LIMIT 1
+             FOR UPDATE`,
+            [vehicleId, bookingId, booking.end_date, booking.start_date]
+          )
+
+          if (conflicts.length > 0) {
+            const err = new Error(`Cannot confirm booking. Vehicle has an overlapping ${conflicts[0].booking_status} booking (${conflicts[0].booking_reference}).`)
+            err.statusCode = 409
+            throw err
+          }
+
+          if (vehicle.availability_status === 'decommissioned') {
+            const err = new Error('Cannot confirm booking for a decommissioned vehicle.')
+            err.statusCode = 400
+            throw err
+          }
+
+          // Update booking
+          await connection.query(
+            `UPDATE bookings
+             SET booking_status = 'confirmed',
+                 approved_by_staff_id = COALESCE(?, approved_by_staff_id),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [staffId, bookingId]
+          )
+
+          // Requirement C: Confirmed booking: booked
+          if (vehicle.availability_status === 'available') {
+            nextVehicleStatus = 'booked'
+            await connection.query(
+              `UPDATE vehicles SET availability_status = 'booked', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+              [vehicleId]
+            )
+          }
+
+        } else if (normalizedTarget === 'active') {
+          // Transitioning confirmed -> active (vehicle handover)
+          // Check if another rental is already active on this vehicle
+          const [activeRentals] = await connection.query(
+            `SELECT id, booking_reference
+             FROM bookings
+             WHERE vehicle_id = ?
+               AND booking_status = 'active'
+               AND id != ?
+             LIMIT 1
+             FOR UPDATE`,
+            [vehicleId, bookingId]
+          )
+
+          if (activeRentals.length > 0) {
+            const err = new Error(`Cannot hand over vehicle. Vehicle is already out on an active rental (${activeRentals[0].booking_reference}).`)
+            err.statusCode = 409
+            throw err
+          }
+
+          if (vehicle.availability_status === 'maintenance' || vehicle.availability_status === 'decommissioned') {
+            const err = new Error(`Cannot hand over vehicle in '${vehicle.availability_status}' status.`)
+            err.statusCode = 400
+            throw err
+          }
+
+          // Update booking
+          await connection.query(
+            `UPDATE bookings
+             SET booking_status = 'active',
+                 approved_by_staff_id = COALESCE(?, approved_by_staff_id),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [staffId, bookingId]
+          )
+
+          // Requirement C: Active rental: rented
+          nextVehicleStatus = 'rented'
+          await connection.query(
+            `UPDATE vehicles SET availability_status = 'rented', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [vehicleId]
+          )
+
+        } else if (normalizedTarget === 'completed') {
+          // Transitioning active -> completed (vehicle return & rental closure)
+          await connection.query(
+            `UPDATE bookings
+             SET booking_status = 'completed',
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [bookingId]
+          )
+
+          // Requirement C & D: Check remaining confirmed/active bookings on this vehicle
+          const [otherBookings] = await connection.query(
+            `SELECT id, booking_reference, booking_status, start_date, end_date
+             FROM bookings
+             WHERE vehicle_id = ?
+               AND booking_status IN ('confirmed', 'active')
+               AND id != ?
+             ORDER BY start_date ASC
+             FOR UPDATE`,
+            [vehicleId, bookingId]
+          )
+
+          const hasActiveBooking = otherBookings.some((b) => b.booking_status === 'active')
+          const hasConfirmedBooking = otherBookings.some((b) => b.booking_status === 'confirmed')
+
+          if (hasActiveBooking) {
+            nextVehicleStatus = 'rented'
+            if (!['maintenance', 'decommissioned'].includes(vehicle.availability_status)) {
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'rented', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          } else if (hasConfirmedBooking) {
+            nextVehicleStatus = 'booked'
+            if (!['maintenance', 'decommissioned'].includes(vehicle.availability_status)) {
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'booked', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          } else {
+            // No other active or confirmed bookings exist!
+            if (['booked', 'rented'].includes(vehicle.availability_status)) {
+              nextVehicleStatus = 'available'
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'available', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          }
+
+        } else if (normalizedTarget === 'cancelled') {
+          // Transitioning pending or confirmed -> cancelled
+          const normalizedReason = reason ? reason.trim() : 'Cancelled by administrator'
+          await connection.query(
+            `UPDATE bookings
+             SET booking_status = 'cancelled',
+                 cancellation_reason = COALESCE(?, cancellation_reason),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [normalizedReason, bookingId]
+          )
+
+          // Requirement C & D: Check remaining confirmed/active bookings on this vehicle
+          const [otherBookings] = await connection.query(
+            `SELECT id, booking_reference, booking_status, start_date, end_date
+             FROM bookings
+             WHERE vehicle_id = ?
+               AND booking_status IN ('confirmed', 'active')
+               AND id != ?
+             ORDER BY start_date ASC
+             FOR UPDATE`,
+            [vehicleId, bookingId]
+          )
+
+          const hasActiveBooking = otherBookings.some((b) => b.booking_status === 'active')
+          const hasConfirmedBooking = otherBookings.some((b) => b.booking_status === 'confirmed')
+
+          if (hasActiveBooking) {
+            nextVehicleStatus = 'rented'
+            if (!['maintenance', 'decommissioned'].includes(vehicle.availability_status)) {
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'rented', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          } else if (hasConfirmedBooking) {
+            nextVehicleStatus = 'booked'
+            if (!['maintenance', 'decommissioned'].includes(vehicle.availability_status)) {
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'booked', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          } else {
+            // No other active or confirmed bookings exist!
+            if (['booked', 'rented'].includes(vehicle.availability_status)) {
+              nextVehicleStatus = 'available'
+              await connection.query(
+                `UPDATE vehicles SET availability_status = 'available', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [vehicleId]
+              )
+            }
+          }
+          // Requirement F: Preserve payment and refund constraints. DO NOT touch payments table!
+        }
+
+        await connection.commit()
+
+        return {
+          message: `Booking status updated to ${normalizedTarget}.`,
+          data: {
+            id: Number(bookingId),
+            status: normalizedTarget,
+            previous_status: currentStatus,
+            vehicle_id: vehicleId,
+            vehicle_availability: nextVehicleStatus
+          }
+        }
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    })
   }
 }
 
