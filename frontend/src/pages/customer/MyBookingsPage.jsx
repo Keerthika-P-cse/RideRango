@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   Calendar,
+  Car,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -22,6 +23,7 @@ import VehicleImage from '../../components/common/VehicleImage.jsx'
 import PaymentReceiptModal from '../../components/common/PaymentReceiptModal.jsx'
 import DrivingLicenceModal from '../../components/customer/DrivingLicenceModal.jsx'
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
+import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
 import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
@@ -38,6 +40,7 @@ export default function MyBookingsPage() {
   const [receiptBooking, setReceiptBooking] = useState(null)
   const [dlModalBooking, setDlModalBooking] = useState(null)
   const [agreementBooking, setAgreementBooking] = useState(null)
+  const [handoverBooking, setHandoverBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' })
@@ -432,6 +435,18 @@ export default function MyBookingsPage() {
                         </button>
                       )}
 
+                      {['confirmed', 'active', 'completed'].includes(booking.booking_status) && (
+                        <button
+                          type="button"
+                          onClick={() => setHandoverBooking(booking)}
+                          className="btn btn-secondary btn-action btn-handover-card-btn"
+                          title="View vehicle handover and inspection record"
+                        >
+                          <Car size={15} />
+                          <span>Handover</span>
+                        </button>
+                      )}
+
                       {isPending && (
                         <Link
                           to={`/payment/${booking.id}`}
@@ -619,6 +634,46 @@ export default function MyBookingsPage() {
                     <p>{selectedBooking.cancellation_reason}</p>
                   </div>
                 )}
+
+                {/* Vehicle Handover Status Overview (Phase 5 Demo) */}
+                {['confirmed', 'active', 'completed'].includes(selectedBooking.booking_status) && (
+                  <div className="modal-handover-overview-box">
+                    <div className="handover-overview-header">
+                      <div className="handover-overview-title">
+                        <Car size={16} />
+                        <strong>Vehicle Handover Status</strong>
+                      </div>
+                      <span className={`handover-overview-badge ${
+                        selectedBooking.booking_status === 'active' || selectedBooking.booking_status === 'completed'
+                          ? 'badge-dispatched'
+                          : 'badge-awaiting'
+                      }`}>
+                        {selectedBooking.booking_status === 'active' || selectedBooking.booking_status === 'completed'
+                          ? 'Handover Completed'
+                          : 'Awaiting Handover'}
+                      </span>
+                    </div>
+                    <p className="handover-overview-text">
+                      {selectedBooking.booking_status === 'active'
+                        ? 'Vehicle was inspected and dispatched. Rental is currently active.'
+                        : selectedBooking.booking_status === 'completed'
+                        ? 'Rental and vehicle handover completed successfully.'
+                        : 'Vehicle will be inspected and keys handed over at hub after agreement acceptance.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const b = selectedBooking
+                        setSelectedBooking(null)
+                        setHandoverBooking(b)
+                      }}
+                      className="btn-handover-inline-view"
+                    >
+                      <Car size={14} />
+                      <span>View Vehicle Handover Sheet</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">
@@ -669,6 +724,21 @@ export default function MyBookingsPage() {
                   >
                     <FileSignature size={16} />
                     <span>Rental Agreement</span>
+                  </button>
+                )}
+                {['confirmed', 'active', 'completed'].includes(selectedBooking.booking_status) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const b = selectedBooking
+                      setSelectedBooking(null)
+                      setHandoverBooking(b)
+                    }}
+                    className="btn btn-secondary btn-handover-modal-trigger"
+                    title="View vehicle handover and inspection record"
+                  >
+                    <Car size={16} />
+                    <span>Vehicle Handover</span>
                   </button>
                 )}
                 <button
@@ -756,6 +826,13 @@ export default function MyBookingsPage() {
           onClose={() => setAgreementBooking(null)}
           booking={agreementBooking}
           onStatusUpdated={() => fetchBookings()}
+        />
+
+        {/* VEHICLE HANDOVER MODAL (Phase 5 Demo) */}
+        <VehicleHandoverModal
+          isOpen={Boolean(handoverBooking)}
+          onClose={() => setHandoverBooking(null)}
+          booking={handoverBooking}
         />
       </div>
     </div>

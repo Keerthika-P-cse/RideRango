@@ -115,6 +115,14 @@ export const adminApi = {
   getAdminAgreements: () =>
     adminRequest('/agreements/admin/list'),
 
+  // Phase 5: Vehicle Handover
+  recordVehicleHandover: (payload) =>
+    adminRequest('/handovers', { method: 'POST', body: payload }),
+  getAdminHandover: (bookingId) =>
+    adminRequest(`/handovers/booking/${bookingId}`),
+  getAdminHandoversList: () =>
+    adminRequest('/handovers/admin/list'),
+
   // Customers
   getCustomers: () => adminRequest('/admin/customers'),
   getCustomerHistory: (id) => adminRequest(`/admin/customers/${id}/bookings`),

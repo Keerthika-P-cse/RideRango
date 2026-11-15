@@ -8,11 +8,17 @@ import {
   MapPin,
   Calendar,
   Clock,
-  FileSignature
+  FileSignature,
+  Car,
+  Gauge,
+  Fuel,
+  UserCheck,
+  CheckSquare
 } from 'lucide-react'
 import adminApi from '../../services/adminApi.js'
 import VehicleImage from '../../components/common/VehicleImage.jsx'
 import RentalAgreementModal from '../../components/customer/RentalAgreementModal.jsx'
+import VehicleHandoverModal from '../../components/customer/VehicleHandoverModal.jsx'
 import './AdminBookingsPage.css'
 
 export default function AdminBookingsPage() {
@@ -44,6 +50,17 @@ export default function AdminBookingsPage() {
   const [generatingAgreement, setGeneratingAgreement] = useState(false)
   const [agreementActionError, setAgreementActionError] = useState('')
   const [viewingAgreementModal, setViewingAgreementModal] = useState(false)
+
+  // Vehicle Handover in Booking Modal (Phase 5 Demo)
+  const [bookingHandover, setBookingHandover] = useState(null)
+  const [loadingHandover, setLoadingHandover] = useState(false)
+  const [showHandoverForm, setShowHandoverForm] = useState(false)
+  const [handoverOdometer, setHandoverOdometer] = useState('12500')
+  const [handoverFuel, setHandoverFuel] = useState('Full')
+  const [handoverNotes, setHandoverNotes] = useState('')
+  const [handoverSubmitting, setHandoverSubmitting] = useState(false)
+  const [handoverError, setHandoverError] = useState('')
+  const [viewingHandoverModal, setViewingHandoverModal] = useState(false)
 
   const loadBookings = useCallback(async () => {
     setLoading(true)
@@ -147,12 +164,76 @@ export default function AdminBookingsPage() {
     }
   }
 
+  const loadBookingHandover = async (b) => {
+    setLoadingHandover(true)
+    setHandoverError('')
+    try {
+      const res = await adminApi.getAdminHandover(b.id)
+      if (res && res.success && res.data) {
+        setBookingHandover(res.data)
+      } else {
+        setBookingHandover({ handed_over: false })
+      }
+    } catch {
+      setBookingHandover({ handed_over: false })
+    } finally {
+      setLoadingHandover(false)
+    }
+  }
+
+  const handleRecordHandover = async (e) => {
+    if (e) e.preventDefault()
+    if (!selectedBooking) return
+
+    const odo = Number(handoverOdometer)
+    if (isNaN(odo) || odo < 0) {
+      setHandoverError('Please enter a valid starting odometer reading (0 or greater).')
+      return
+    }
+
+    setHandoverSubmitting(true)
+    setHandoverError('')
+    try {
+      const res = await adminApi.recordVehicleHandover({
+        booking_id: selectedBooking.id,
+        odometer_reading: odo,
+        fuel_level: handoverFuel,
+        handover_notes: handoverNotes
+      })
+
+      if (res && res.success) {
+        setSuccessMsg(
+          `Vehicle handover recorded for ${selectedBooking.booking_reference}. Booking is now ACTIVE and vehicle is RENTED.`
+        )
+        setSelectedBooking((prev) => ({
+          ...prev,
+          booking_status: 'active'
+        }))
+        setShowHandoverForm(false)
+        await loadBookingHandover(selectedBooking)
+        await loadBookings()
+      } else {
+        setHandoverError(res.message || 'Failed to record vehicle handover.')
+      }
+    } catch (err) {
+      setHandoverError(err.message || 'Failed to record vehicle handover.')
+    } finally {
+      setHandoverSubmitting(false)
+    }
+  }
+
   const handleOpenDetailModal = (b) => {
     setSelectedBooking(b)
     setNewStatus(b.booking_status)
     setUpdateError('')
+    setShowHandoverForm(false)
+    setHandoverError('')
+    setHandoverOdometer('12500')
+    setHandoverFuel('Full')
+    setHandoverNotes('')
     loadBookingDoc(b)
     loadBookingAgreement(b)
+    loadBookingHandover(b)
   }
 
   const handleUpdateStatus = async (e) => {
@@ -596,6 +677,220 @@ export default function AdminBookingsPage() {
                 )}
               </div>
 
+              {/* Vehicle Handover Section Card (Phase 5 Demo) */}
+              <div className="inspect-dl-box inspect-handover-box">
+                <div className="inspect-dl-header">
+                  <div className="dl-title-cluster">
+                    <span className="box-lbl">Vehicle Handover</span>
+                    <span className="dl-sub-note">Fleet vehicle dispatch, starting odometer &amp; fuel verification</span>
+                  </div>
+                  {bookingHandover && (
+                    <span
+                      className={`doc-status-badge ${
+                        bookingHandover.handed_over
+                          ? 'badge-accepted'
+                          : bookingAgreement?.agreement_status === 'accepted' &&
+                            selectedBooking.booking_status === 'confirmed'
+                          ? 'badge-pending'
+                          : 'badge-not_submitted'
+                      }`}
+                    >
+                      {bookingHandover.handed_over
+                        ? 'Handover Completed'
+                        : bookingAgreement?.agreement_status === 'accepted' &&
+                          selectedBooking.booking_status === 'confirmed'
+                        ? 'Ready for Handover'
+                        : bookingAgreement?.agreement_status !== 'accepted'
+                        ? 'Agreement Required'
+                        : 'Not Applicable'}
+                    </span>
+                  )}
+                </div>
+
+                {loadingHandover ? (
+                  <p className="dl-empty-note">Loading handover status...</p>
+                ) : bookingHandover?.handed_over && bookingHandover.handover ? (
+                  /* ALREADY HANDED OVER */
+                  <div className="handover-admin-completed">
+                    <div className="handover-completed-summary">
+                      <div className="handover-stat-line">
+                        <CheckCircle2 size={16} className="text-green" />
+                        <span>
+                          Dispatched on{' '}
+                          <strong>
+                            {new Date(bookingHandover.handover.handover_datetime).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short'
+                            })}
+                          </strong>
+                        </span>
+                      </div>
+                      <div className="handover-metrics-inline">
+                        <div className="h-metric">
+                          <Gauge size={14} />
+                          <span>
+                            Odometer:{' '}
+                            <strong>
+                              {Number(bookingHandover.handover.odometer_reading).toLocaleString('en-IN')} km
+                            </strong>
+                          </span>
+                        </div>
+                        <div className="h-metric">
+                          <Fuel size={14} />
+                          <span>
+                            Fuel: <strong>{bookingHandover.handover.fuel_level_display}</strong>
+                          </span>
+                        </div>
+                        <div className="h-metric">
+                          <UserCheck size={14} />
+                          <span>
+                            By: <strong>{bookingHandover.handover.recorded_by}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      {bookingHandover.handover.handover_notes && (
+                        <p className="handover-admin-notes">
+                          Remarks: <em>{bookingHandover.handover.handover_notes}</em>
+                        </p>
+                      )}
+                    </div>
+                    <div className="agr-admin-btn-row">
+                      <button
+                        type="button"
+                        onClick={() => setViewingHandoverModal(true)}
+                        className="btn-view-agreement"
+                      >
+                        <Eye size={14} />
+                        <span>View Handover Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* NOT YET HANDED OVER */
+                  <div className="handover-admin-actions">
+                    {bookingAgreement?.agreement_status !== 'accepted' ? (
+                      <div className="handover-locked-hint">
+                        <Clock size={16} />
+                        <span>
+                          Vehicle handover is locked. Customer must review and accept the rental agreement first.
+                        </span>
+                      </div>
+                    ) : selectedBooking.booking_status !== 'confirmed' ? (
+                      <div className="handover-locked-hint">
+                        <AlertCircle size={16} />
+                        <span>
+                          Vehicle handover can only be performed for confirmed bookings (current status:{' '}
+                          {selectedBooking.booking_status}).
+                        </span>
+                      </div>
+                    ) : !showHandoverForm ? (
+                      <div className="handover-start-wrap">
+                        <p className="dl-empty-note">
+                          Rental agreement is accepted. Vehicle is ready for odometer/fuel inspection and key handover.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowHandoverForm(true)
+                            setHandoverError('')
+                            if (!handoverOdometer) {
+                              setHandoverOdometer('12500')
+                            }
+                          }}
+                          className="btn-start-handover"
+                        >
+                          <Car size={16} />
+                          <span>Start Vehicle Handover</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* HANDOVER FORM */
+                      <form onSubmit={handleRecordHandover} className="handover-admin-form">
+                        <div className="handover-form-header">
+                          <Car size={18} />
+                          <strong>Dispatch Vehicle Handover Form</strong>
+                        </div>
+
+                        <div className="handover-form-row">
+                          <div className="form-field-group">
+                            <label>Starting Odometer (km):</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={handoverOdometer}
+                              onChange={(e) => setHandoverOdometer(e.target.value)}
+                              placeholder="e.g. 14250"
+                              required
+                              className="handover-input"
+                            />
+                          </div>
+
+                          <div className="form-field-group">
+                            <label>Starting Fuel Level:</label>
+                            <select
+                              value={handoverFuel}
+                              onChange={(e) => setHandoverFuel(e.target.value)}
+                              className="handover-select"
+                            >
+                              <option value="Full">Full (100%)</option>
+                              <option value="3/4">¾ (75%)</option>
+                              <option value="1/2">½ (50%)</option>
+                              <option value="1/4">¼ (25%)</option>
+                              <option value="Empty">Empty (0%)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-field-group full-width">
+                          <label>Handover Remarks (Optional):</label>
+                          <textarea
+                            value={handoverNotes}
+                            onChange={(e) => setHandoverNotes(e.target.value)}
+                            placeholder="e.g. Clean interior, spare tyre inspected, keys handed to customer."
+                            rows={2}
+                            className="handover-textarea"
+                          />
+                        </div>
+
+                        <div className="handover-confirm-notice">
+                          <AlertCircle size={14} />
+                          <span>
+                            Confirming handover will immediately set booking status to <strong>ACTIVE</strong> and
+                            vehicle availability to <strong>RENTED</strong>.
+                          </span>
+                        </div>
+
+                        <div className="handover-form-btn-row">
+                          <button
+                            type="submit"
+                            disabled={handoverSubmitting}
+                            className="btn-confirm-handover"
+                          >
+                            <CheckSquare size={15} />
+                            <span>{handoverSubmitting ? 'Recording Handover...' : 'Confirm Handover'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowHandoverForm(false)}
+                            disabled={handoverSubmitting}
+                            className="btn-cancel-handover"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {handoverError && (
+                  <div className="modal-error-box" style={{ marginTop: '8px' }}>
+                    <AlertCircle size={14} />
+                    <span>{handoverError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Status Update Form */}
               <form onSubmit={handleUpdateStatus} className="status-update-form">
                 <div className="update-form-field">
@@ -647,6 +942,16 @@ export default function AdminBookingsPage() {
           isOpen={viewingAgreementModal}
           booking={selectedBooking}
           onClose={() => setViewingAgreementModal(false)}
+          isAdminView={true}
+        />
+      )}
+
+      {/* VEHICLE HANDOVER REVIEW MODAL FOR ADMIN */}
+      {viewingHandoverModal && selectedBooking && (
+        <VehicleHandoverModal
+          isOpen={viewingHandoverModal}
+          booking={selectedBooking}
+          onClose={() => setViewingHandoverModal(false)}
           isAdminView={true}
         />
       )}

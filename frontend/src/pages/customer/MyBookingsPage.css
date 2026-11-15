@@ -771,3 +771,98 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Phase 5: Demo Vehicle Handover Elements */
+.btn-handover-card-btn {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.btn-handover-card-btn:hover {
+  background: rgba(37, 99, 235, 0.25) !important;
+  border-color: #60a5fa !important;
+}
+
+.btn-handover-modal-trigger {
+  background: #1e293b;
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+.btn-handover-modal-trigger:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.modal-handover-overview-box {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+
+.handover-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.handover-overview-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f1f5f9;
+  font-size: 0.85rem;
+}
+
+.handover-overview-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.badge-dispatched {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-awaiting {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.handover-overview-text {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.btn-handover-inline-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e293b;
+  color: #60a5fa;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-handover-inline-view:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}

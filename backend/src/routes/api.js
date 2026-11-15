@@ -7,6 +7,7 @@ import paymentRoutes from './paymentRoutes.js'
 import adminRoutes from './adminRoutes.js'
 import documentRoutes from './documentRoutes.js'
 import agreementRoutes from './agreementRoutes.js'
+import handoverRoutes from './handoverRoutes.js'
 
 const apiRouter = Router()
 
@@ -33,5 +34,8 @@ apiRouter.use('/documents', documentRoutes)
 
 // Phase 4: Agreements (Demo Rental Agreement Acceptance)
 apiRouter.use('/agreements', agreementRoutes)
+
+// Phase 5: Handovers (Demo Vehicle Handover Workflow)
+apiRouter.use('/handovers', handoverRoutes)
 
 export default apiRouter

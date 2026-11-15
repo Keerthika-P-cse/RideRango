@@ -276,6 +276,11 @@ export const api = {
     })
   },
 
+  // Phase 5: Vehicle Handover
+  getHandoverDetails: async (bookingId) => {
+    return request(`/handovers/booking/${bookingId}`)
+  },
+
   getBaseUrl: () => API_BASE_URL
 }
 
