@@ -619,17 +619,30 @@
 
 /* Print Rules */
 @media print {
-  body * {
-    visibility: hidden !important;
+  :root, html, body, #root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
   }
 
   .return-modal-backdrop {
     position: static !important;
-    background: none !important;
-    backdrop-filter: none !important;
-    padding: 0 !important;
-    overflow: visible !important;
     display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
   }
 
   .return-modal-card,
@@ -638,19 +651,66 @@
   }
 
   .return-modal-card {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
     width: 100% !important;
     max-width: 100% !important;
-    border: none !important;
-    box-shadow: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
     max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    border: none !important;
     border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .return-modal-header {
+    background: #ffffff !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding: 12px 0 !important;
+  }
+
+  .return-modal-body {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+
+  .return-detail-card,
+  .return-metric-item,
+  .return-remarks-card,
+  .return-settlement-notice {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .return-card-title,
+  .return-val,
+  .return-metric-val {
+    color: #0f172a !important;
+  }
+
+  .return-lbl,
+  .return-metric-lbl,
+  .return-remarks-p {
+    color: #475569 !important;
   }
 
   .return-modal-close-btn,
-  .return-modal-footer {
+  .return-modal-footer,
+  .btn-return-print,
+  .btn-return-close,
+  .no-print {
     display: none !important;
+    visibility: hidden !important;
   }
 }

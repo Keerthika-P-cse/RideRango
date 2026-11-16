@@ -112,14 +112,11 @@
 html {
   font-family: var(--font-family-base);
   font-size: 16px;
-  color-scheme: dark;
-  background: var(--color-bg);
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
-  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
@@ -128,6 +125,16 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media screen {
+  html {
+    color-scheme: dark;
+    background: var(--color-bg);
+  }
+  body {
+    background: var(--color-bg);
+  }
 }
 
 button,
@@ -231,5 +238,86 @@ img {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Global Print Stylesheet (High-Fidelity Document Printing)
+   ========================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  :root {
+    --color-bg: #ffffff !important;
+    --color-surface: #ffffff !important;
+    --color-surface-light: #f8fafc !important;
+    --color-surface-elevated: #f1f5f9 !important;
+    --color-text: #0f172a !important;
+    --color-text-secondary: #475569 !important;
+    --color-muted: #64748b !important;
+    --color-border: #cbd5e1 !important;
+  }
+
+  :root, html, body, #root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide screen navigation, headers, footers, and listing grids during print */
+  .navbar-wrapper,
+  .footer-wrapper,
+  header.navbar-wrapper,
+  footer.footer-wrapper,
+  header.navbar,
+  header:not(.receipt-header):not(.agr-modal-header):not(.handover-modal-header):not(.return-modal-header):not(.settlement-modal-header),
+  nav,
+  footer:not(.receipt-footer),
+  .site-header,
+  .site-footer,
+  .no-print,
+  .bookings-header-row,
+  .bookings-tabs-bar,
+  .bookings-cards-grid,
+  .bookings-filter-bar,
+  .payment-success-card,
+  .payment-layout,
+  .customer-layout-shell > header,
+  .customer-layout-shell > footer {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset layout shells */
+  .customer-layout-shell,
+  .customer-main-content,
+  .my-bookings-wrapper,
+  .bookings-container,
+  .payment-page-wrapper,
+  .payment-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
 }

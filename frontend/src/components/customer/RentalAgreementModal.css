@@ -692,35 +692,86 @@
 
 /* Print Styles */
 @media print {
-  body * {
-    visibility: hidden;
+  :root, html, body, #root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
   }
+
   .agr-modal-backdrop {
-    position: static;
-    background: transparent;
-    padding: 0;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
   }
+
   .agr-modal-card,
   .agr-modal-card * {
-    visibility: visible;
+    visibility: visible !important;
   }
+
   .agr-modal-card {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-height: none;
-    box-shadow: none;
-    border: none;
-    background: #ffffff;
-    color: #000000;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
   }
+
+  .agr-modal-header {
+    background: #ffffff !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding: 12px 0 !important;
+  }
+
+  .agr-modal-body {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+
+  .agr-academic-banner {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    margin: 12px 0 !important;
+  }
+
   .agr-btn-print,
   .agr-btn-close,
+  .agr-btn-refresh-icon,
   .agr-modal-footer,
-  .agr-btn-accept {
+  .agr-btn-accept,
+  .no-print {
     display: none !important;
+    visibility: hidden !important;
   }
+
   .agr-section,
   .agr-info-card,
   .agr-term-item,
@@ -729,13 +780,21 @@
     background: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
     color: #0f172a !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
+
   .agr-head-title,
   .agr-section-title,
   .agr-card-val,
   .agr-term-head {
     color: #0f172a !important;
   }
+
+  .agr-fin-row span {
+    color: #0f172a !important;
+  }
+
   .agr-card-sub,
   .agr-term-body,
   .agr-sched-loc {

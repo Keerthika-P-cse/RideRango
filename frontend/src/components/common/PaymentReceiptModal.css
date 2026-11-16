@@ -703,10 +703,11 @@
 }
 
 @media print {
-  /* Hide all external elements and UI wrappers */
-  html, body {
+  /* Clean white page background - eliminate black border/canvas */
+  :root, html, body, #root {
     background: #ffffff !important;
-    color: #000000 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
     width: 100% !important;
     height: auto !important;
     margin: 0 !important;
@@ -717,23 +718,27 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide everything in the page by default */
-  body * {
-    visibility: hidden;
-  }
-
-  /* Make only the receipt document visible */
+  /* Make receipt document visible */
   .payment-receipt-print-area,
   .payment-receipt-print-area * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   /* Completely eliminate non-printable components & screen navigation */
   .no-print,
   .receipt-modal-topbar,
-  header:not(.receipt-header),
+  .btn-receipt-action,
+  .btn-receipt-print,
+  .btn-receipt-close,
   nav,
-  footer:not(.receipt-footer) {
+  .navbar,
+  footer:not(.receipt-footer),
+  .payment-success-card,
+  .payment-layout,
+  .bookings-header-row,
+  .bookings-filter-bar,
+  .bookings-tabs-bar,
+  .bookings-list-grid {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -742,19 +747,7 @@
     opacity: 0 !important;
   }
 
-  /* Suppress surrounding page content & sibling elements so no blank pages are generated */
-  .bookings-container > *:not(.receipt-modal-backdrop),
-  .payment-container > *:not(.receipt-modal-backdrop),
-  .payment-success-card,
-  .payment-layout,
-  .bookings-header-row,
-  .bookings-filter-bar,
-  .bookings-tabs-bar,
-  .bookings-list-grid {
-    display: none !important;
-  }
-
-  /* Reset outer layout wrappers to prevent multi-page whitespace */
+  /* Reset outer layout wrappers to prevent multi-page whitespace & borders */
   .customer-layout-shell,
   .customer-main-content,
   .my-bookings-wrapper,
@@ -766,7 +759,11 @@
     min-height: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Neutralize modal backdrop & container for print (preserve receipt document in normal flow) */
@@ -862,6 +859,11 @@
   .receipt-pricing-table thead tr {
     background: #f1f5f9 !important;
     border-color: #94a3b8 !important;
+  }
+
+  .tr-total td {
+    border-top: 2px solid #cbd5e1 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
   }
 
   .status-paid-pill {

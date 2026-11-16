@@ -595,37 +595,111 @@
 
 /* Print Styles */
 @media print {
-  .no-print {
-    display: none !important;
+  :root, html, body, #root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
   }
+
   .settlement-modal-overlay {
-    position: static;
-    background: transparent;
-    padding: 0;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
   }
+
+  .settlement-modal-dialog,
+  .settlement-modal-dialog * {
+    visibility: visible !important;
+  }
+
   .settlement-modal-dialog {
-    max-width: 100%;
-    max-height: none;
-    box-shadow: none;
-    border: none;
-    background: white;
-    color: black;
-  }
-  .settlement-academic-banner {
-    background: #e2e8f0 !important;
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
     color: #0f172a !important;
   }
-  .settlement-modal-header,
+
+  .settlement-modal-header {
+    background: #ffffff !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding: 12px 0 !important;
+  }
+
+  .settlement-modal-title {
+    color: #0f172a !important;
+  }
+
+  .settlement-modal-subtitle {
+    color: #475569 !important;
+  }
+
+  .settlement-modal-body {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+
+  .settlement-academic-banner {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    margin: 12px 0 !important;
+  }
+
+  .settlement-header-actions,
+  .settlement-modal-footer,
+  .settlement-btn-close,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
   .settlement-info-card,
   .charges-breakdown-section,
   .settlement-accounting-card,
   .settlement-status-card {
     background: #f8fafc !important;
-    border-color: #cbd5e1 !important;
-    color: black !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
-  .charges-table th,
+
+  .charges-table th {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
   .charges-table td {
-    color: black !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
   }
 }
